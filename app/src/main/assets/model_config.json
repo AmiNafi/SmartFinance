@@ -1,0 +1,10 @@
+{
+  "model_type": "transfer_learning_use",
+  "embedding_model": "universal-sentence-encoder",
+  "embedding_size": 512,
+  "classes": [
+    "expense",
+    "income"
+  ],
+  "accuracy": 0.9200000166893005
+}
