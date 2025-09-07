@@ -72,7 +72,7 @@ class PatternBasedTransactionAIService : TransactionAIService {
         }
     }
 
-    private fun classifyWithPatterns(text: String): ModelResult {
+    internal fun classifyWithPatterns(text: String): ModelResult {
         val words = text.split("\\s+".toRegex()).map { it.lowercase().trim() }
 
         // Determine money flow direction
@@ -121,34 +121,69 @@ class PatternBasedTransactionAIService : TransactionAIService {
     }
 
     /**
-     * CONTEXTUAL money flow detection - understands meaning, not just keywords
+     * ADVANCED CONTEXTUAL money flow detection - understands WHO is doing WHAT to WHOM
      */
     private fun detectMoneyFlowDirection(text: String, words: List<String>): TransactionType {
         val lowerText = text.lowercase()
         var incomeScore = 0
         var expenseScore = 0
 
-        // ===== CONTEXTUAL ANALYSIS - Understand Meaning =====
+        // ===== ADVANCED CONTEXTUAL ANALYSIS =====
 
-        // 1. DIRECT MONEY FLOW PATTERNS (most important)
+        // 1. PREPOSITION-BASED ANALYSIS (most important)
+        val prepositionAnalysis = analyzePrepositions(words, lowerText)
+        incomeScore += prepositionAnalysis.incomeScore
+        expenseScore += prepositionAnalysis.expenseScore
+
+        // 2. SUBJECT-VERB-OBJECT ANALYSIS
+        val svoAnalysis = analyzeSubjectVerbObject(words, lowerText)
+        incomeScore += svoAnalysis.incomeScore
+        expenseScore += svoAnalysis.expenseScore
+
+        // 3. GIFT AND REWARD PATTERNS (high priority)
+        if (lowerText.contains("gift") || lowerText.contains("present") ||
+            lowerText.contains("donation") || lowerText.contains("prize") ||
+            lowerText.contains("award") || lowerText.contains("bonus") ||
+            lowerText.contains("reward")) {
+            incomeScore += 4
+            println("🤖 GIFT/REWARD DETECTED: Strong INCOME signal (+4)")
+        }
+
+        // 3.5 FAMILY RELATIONSHIP PATTERNS (high priority for money from family)
+        val familyWords = listOf("father", "mother", "dad", "mom", "parent", "brother", "sister", "son", "daughter", "uncle", "aunt", "grandfather", "grandmother")
+        val hasFamilyRelation = familyWords.any { lowerText.contains(it) }
+        if (hasFamilyRelation && (lowerText.contains("got") || lowerText.contains("received") || lowerText.contains("money"))) {
+            incomeScore += 3
+            println("🤖 FAMILY MONEY: Money from family member = INCOME (+3)")
+        }
+
+        // 4. DIRECT MONEY FLOW PATTERNS
         // "gave me/to me" = money coming to me = INCOME
         if (lowerText.contains("gave me") || lowerText.contains("gave to me") ||
-            lowerText.contains("lent me") || lowerText.contains("paid me")) {
+            lowerText.contains("lent me") || lowerText.contains("paid me") ||
+            lowerText.contains("sent me")) {
             incomeScore += 3
-            println("🤖 CONTEXT: Money coming TO me")
+            println("🤖 DIRECT: Money coming TO me (+3)")
         }
 
         // "gave to/away" = money going from me = EXPENSE
-        if (lowerText.contains("gave to") || lowerText.contains("gave away") ||
-            lowerText.contains("lent to") || lowerText.contains("paid to")) {
+        // But be careful with "gave to me" vs "gave to father"
+        if (lowerText.contains("gave to") && !lowerText.contains("gave to me") && !lowerText.contains("gave me")) {
             expenseScore += 3
-            println("🤖 CONTEXT: Money going FROM me")
+            println("🤖 DIRECT: Money going FROM me (+3)")
+        }
+        if (lowerText.contains("gave away") || lowerText.contains("lent to") ||
+            lowerText.contains("paid to") || lowerText.contains("sent to")) {
+            expenseScore += 3
+            println("🤖 DIRECT: Money going FROM me (+3)")
         }
 
         // 2. RECEIVING PATTERNS
         val receivingPatterns = listOf(
             "got from", "received from", "got money", "money came",
-            "came from", "transfer to me", "deposit to"
+            "came from", "transfer to me", "deposit to",
+            "gift from", "present from", "donation from", "prize from",
+            "money from", "cash from", "payment from"
         )
         for (pattern in receivingPatterns) {
             if (lowerText.contains(pattern)) {
@@ -169,7 +204,7 @@ class PatternBasedTransactionAIService : TransactionAIService {
             }
         }
 
-        // 4. POSSESSIVE CONTEXT
+        // 4. POSSESSIVE CONTEXT - FIXED LOGIC
         // "my money", "I got", "me" in receiving context
         if (words.contains("me") || words.contains("my") || words.contains("i")) {
             // Look for context around personal pronouns
@@ -178,6 +213,7 @@ class PatternBasedTransactionAIService : TransactionAIService {
                 val beforeMe = if (meIndex > 0) words[meIndex - 1] else ""
                 val afterMe = if (meIndex < words.size - 1) words[meIndex + 1] else ""
 
+                // INCOME patterns: someone gave/paid/lent TO me
                 if (beforeMe == "gave" || beforeMe == "paid" || beforeMe == "lent") {
                     incomeScore += 2
                     println("🤖 POSSESSIVE: '$beforeMe me' = receiving")
@@ -187,23 +223,49 @@ class PatternBasedTransactionAIService : TransactionAIService {
                     println("🤖 POSSESSIVE: 'to me' = receiving")
                 }
             }
+
+            // EXPENSE patterns: I got/bought something FOR myself
+            if (lowerText.contains("for myself") || lowerText.contains("for me")) {
+                expenseScore += 3
+                println("🤖 POSSESSIVE: 'for myself/me' = personal purchase (EXPENSE)")
+            }
+
+            // Context clues for shopping/purchasing
+            if (lowerText.contains("went to market") || lowerText.contains("shopping") ||
+                lowerText.contains("bought") || lowerText.contains("purchase")) {
+                expenseScore += 2
+                println("🤖 CONTEXT: Shopping/market activity detected = EXPENSE")
+            }
         }
 
-        // 5. BASIC VERBS (fallback)
-        val basicIncomeVerbs = listOf("received", "got", "earned")
+        // 5. SEMANTIC VERB ANALYSIS - Context-aware understanding
+        val basicIncomeVerbs = listOf("received", "earned", "got")
         val basicExpenseVerbs = listOf("paid", "spent", "bought")
 
+        // Smart verb analysis with semantic context
         for (verb in basicIncomeVerbs) {
             if (words.contains(verb)) {
-                incomeScore += 1
-                println("🤖 VERB: '$verb' (+1)")
+                val verbIndex = words.indexOf(verb)
+                val contextWords = getContextWords(words, verbIndex, 3)
+
+                // Check if "got" is used in shopping context
+                if (verb == "got" && isShoppingContext(lowerText, contextWords)) {
+                    expenseScore += 2
+                    println("🤖 SEMANTIC: '$verb' in shopping context = EXPENSE (+2)")
+                } else if (verb == "got" && isReceivingMoneyContext(lowerText, contextWords)) {
+                    incomeScore += 2
+                    println("🤖 SEMANTIC: '$verb' in money receiving context = INCOME (+2)")
+                } else {
+                    incomeScore += 1
+                    println("🤖 VERB: '$verb' = INCOME (+1)")
+                }
             }
         }
 
         for (verb in basicExpenseVerbs) {
             if (words.contains(verb)) {
                 expenseScore += 1
-                println("🤖 VERB: '$verb' (+1)")
+                println("🤖 VERB: '$verb' = EXPENSE (+1)")
             }
         }
 
@@ -229,6 +291,142 @@ class PatternBasedTransactionAIService : TransactionAIService {
     }
 
     /**
+     * Analyze prepositions to understand money flow direction
+     */
+    private fun analyzePrepositions(words: List<String>, text: String): ScoreResult {
+        var incomeScore = 0
+        var expenseScore = 0
+
+        // Find preposition positions
+        val prepositionIndices = words.mapIndexedNotNull { index, word ->
+            if (word in listOf("to", "from", "by", "with", "for")) index to word else null
+        }
+
+        for ((prepIndex, preposition) in prepositionIndices) {
+            val beforePrep = if (prepIndex > 0) words[prepIndex - 1] else ""
+            val afterPrep = if (prepIndex < words.size - 1) words[prepIndex + 1] else ""
+
+            when (preposition) {
+                "from" -> {
+                    // "money FROM someone" = INCOME
+                    // "bought FROM store" = EXPENSE
+                    if (beforePrep in listOf("got", "received", "money", "gift", "payment")) {
+                        incomeScore += 3
+                        println("🤖 PREP: '$beforePrep FROM $afterPrep' = INCOME (+3)")
+                    } else if (beforePrep in listOf("bought", "paid", "spent")) {
+                        expenseScore += 2
+                        println("🤖 PREP: '$beforePrep FROM $afterPrep' = EXPENSE (+2)")
+                    }
+                }
+                "to" -> {
+                    // "gave TO someone" = EXPENSE
+                    // "transfer TO me" = INCOME
+                    if (beforePrep in listOf("gave", "paid", "sent", "lent")) {
+                        expenseScore += 3
+                        println("🤖 PREP: '$beforePrep TO $afterPrep' = EXPENSE (+3)")
+                    } else if (afterPrep == "me" || beforePrep in listOf("transfer", "deposit")) {
+                        incomeScore += 3
+                        println("🤖 PREP: '$beforePrep TO $afterPrep' = INCOME (+3)")
+                    }
+                }
+                "for" -> {
+                    // "paid FOR something" = EXPENSE
+                    // "worked FOR money" = INCOME
+                    if (beforePrep in listOf("paid", "spent", "bought")) {
+                        expenseScore += 2
+                        println("🤖 PREP: '$beforePrep FOR $afterPrep' = EXPENSE (+2)")
+                    }
+                }
+                "by" -> {
+                    // "paid BY someone" = INCOME
+                    if (beforePrep in listOf("paid", "sent")) {
+                        incomeScore += 2
+                        println("🤖 PREP: '$beforePrep BY $afterPrep' = INCOME (+2)")
+                    }
+                }
+            }
+        }
+
+        return ScoreResult(incomeScore, expenseScore)
+    }
+
+    /**
+     * Analyze Subject-Verb-Object relationships
+     */
+    private fun analyzeSubjectVerbObject(words: List<String>, text: String): ScoreResult {
+        var incomeScore = 0
+        var expenseScore = 0
+
+        // Find action verbs
+        val actionVerbs = listOf("got", "gave", "paid", "received", "spent", "bought", "sent", "earned")
+        val verbIndices = words.mapIndexedNotNull { index, word ->
+            if (word in actionVerbs) index to word else null
+        }
+
+        for ((verbIndex, verb) in verbIndices) {
+            val subject = if (verbIndex > 0) words[verbIndex - 1] else ""
+            val objStart = verbIndex + 1
+            val objWords = if (objStart < words.size) words.subList(objStart, min(objStart + 3, words.size)) else emptyList()
+            val obj = objWords.joinToString(" ")
+
+            when (verb) {
+                "got" -> {
+                    // Analyze what was "got"
+                    if (obj.contains("gift") || obj.contains("money") || obj.contains("payment") ||
+                        obj.contains("from") || obj.contains("salary")) {
+                        incomeScore += 3
+                        println("🤖 SVO: '$subject GOT $obj' = INCOME (+3)")
+                    } else if (obj.contains("coffee") || obj.contains("lunch") || obj.contains("groceries")) {
+                        expenseScore += 3
+                        println("🤖 SVO: '$subject GOT $obj' = EXPENSE (+3)")
+                    }
+                }
+                "gave" -> {
+                    // "I gave money" = EXPENSE
+                    // "gave me money" = INCOME (but this is handled elsewhere)
+                    if (subject == "i" && (obj.contains("money") || obj.contains("to"))) {
+                        expenseScore += 3
+                        println("🤖 SVO: '$subject GAVE $obj' = EXPENSE (+3)")
+                    }
+                }
+                "paid" -> {
+                    if (obj.contains("for") || obj.contains("bill") || obj.contains("rent")) {
+                        expenseScore += 2
+                        println("🤖 SVO: '$subject PAID $obj' = EXPENSE (+2)")
+                    } else if (obj.contains("me") || obj.contains("back")) {
+                        incomeScore += 2
+                        println("🤖 SVO: '$subject PAID $obj' = INCOME (+2)")
+                    }
+                }
+                "received" -> {
+                    incomeScore += 2
+                    println("🤖 SVO: '$subject RECEIVED $obj' = INCOME (+2)")
+                }
+                "spent" -> {
+                    expenseScore += 2
+                    println("🤖 SVO: '$subject SPENT $obj' = EXPENSE (+2)")
+                }
+                "bought" -> {
+                    expenseScore += 2
+                    println("🤖 SVO: '$subject BOUGHT $obj' = EXPENSE (+2)")
+                }
+                "sent" -> {
+                    if (obj.contains("to") || obj.contains("money")) {
+                        expenseScore += 2
+                        println("🤖 SVO: '$subject SENT $obj' = EXPENSE (+2)")
+                    }
+                }
+                "earned" -> {
+                    incomeScore += 3
+                    println("🤖 SVO: '$subject EARNED $obj' = INCOME (+3)")
+                }
+            }
+        }
+
+        return ScoreResult(incomeScore, expenseScore)
+    }
+
+    /**
      * Analyze sentence structure for final context clues
      */
     private fun analyzeSentenceContext(text: String, words: List<String>): TransactionType {
@@ -247,319 +445,14 @@ class PatternBasedTransactionAIService : TransactionAIService {
     }
 
     /**
-     * Handle close calls with additional sophisticated analysis
+     * Data class for scoring results
      */
-    private fun handleCloseCall(text: String, words: List<String>, incomeScore: Float, expenseScore: Float): TransactionType {
-        // Heuristic 1: Length of transaction description
-        // Longer descriptions tend to be expenses (more details about what was bought)
-        if (words.size > 6) {
-            return TransactionType.EXPENSE
-        }
-
-        // Heuristic 2: Presence of specific expense keywords
-        val expenseKeywords = listOf("bought", "purchased", "paid", "spent", "cost")
-        if (expenseKeywords.any { words.contains(it) }) {
-            return TransactionType.EXPENSE
-        }
-
-        // Heuristic 3: Default to expense (more common in daily transactions)
-        return TransactionType.EXPENSE
-    }
-
-    // Comprehensive knowledge base with synonyms and patterns
-    private val knowledgeBase = listOf(
-        // Expense patterns with synonyms
-        TransactionPattern(
-            keywords = listOf("groceries", "grocery", "food", "supermarket", "shopping"),
-            verbs = listOf("bought", "bought", "purchased", "got", "bought"),
-            type = TransactionType.EXPENSE,
-            title = "Groceries",
-            description = "Grocery shopping",
-            category = "Food"
-        ),
-        TransactionPattern(
-            keywords = listOf("lunch", "dinner", "meal", "restaurant", "food", "eat"),
-            verbs = listOf("paid", "ate", "had", "bought"),
-            type = TransactionType.EXPENSE,
-            title = "Food",
-            description = "Restaurant or meal",
-            category = "Food"
-        ),
-        TransactionPattern(
-            keywords = listOf("coffee", "cafe", "starbucks", "drink"),
-            verbs = listOf("bought", "got", "had"),
-            type = TransactionType.EXPENSE,
-            title = "Coffee",
-            description = "Coffee or beverage",
-            category = "Food"
-        ),
-        TransactionPattern(
-            keywords = listOf("electricity", "power", "utility", "bill"),
-            verbs = listOf("paid", "payed"),
-            type = TransactionType.EXPENSE,
-            title = "Electricity Bill",
-            description = "Electricity utility payment",
-            category = "Utilities"
-        ),
-        TransactionPattern(
-            keywords = listOf("gas", "fuel", "petrol", "diesel"),
-            verbs = listOf("bought", "filled", "got"),
-            type = TransactionType.EXPENSE,
-            title = "Gas",
-            description = "Vehicle fuel",
-            category = "Transportation"
-        ),
-        TransactionPattern(
-            keywords = listOf("rent", "apartment", "house", "housing"),
-            verbs = listOf("paid", "payed"),
-            type = TransactionType.EXPENSE,
-            title = "Rent",
-            description = "Housing rent payment",
-            category = "Housing"
-        ),
-        TransactionPattern(
-            keywords = listOf("taxi", "uber", "lyft", "cab", "transport", "ride"),
-            verbs = listOf("paid", "took", "used"),
-            type = TransactionType.EXPENSE,
-            title = "Transportation",
-            description = "Transportation service",
-            category = "Transportation"
-        ),
-        TransactionPattern(
-            keywords = listOf("clothes", "clothing", "shirt", "pants", "shoes", "dress"),
-            verbs = listOf("bought", "purchased", "got"),
-            type = TransactionType.EXPENSE,
-            title = "Clothing",
-            description = "Clothing purchase",
-            category = "Shopping"
-        ),
-        TransactionPattern(
-            keywords = listOf("internet", "wifi", "broadband", "connection"),
-            verbs = listOf("paid", "payed"),
-            type = TransactionType.EXPENSE,
-            title = "Internet",
-            description = "Internet service",
-            category = "Utilities"
-        ),
-        TransactionPattern(
-            keywords = listOf("phone", "mobile", "cell", "smartphone"),
-            verbs = listOf("bought", "purchased", "got"),
-            type = TransactionType.EXPENSE,
-            title = "Phone",
-            description = "Mobile phone purchase",
-            category = "Electronics"
-        ),
-        TransactionPattern(
-            keywords = listOf("water", "utility", "bill"),
-            verbs = listOf("paid", "payed"),
-            type = TransactionType.EXPENSE,
-            title = "Water Bill",
-            description = "Water utility payment",
-            category = "Utilities"
-        ),
-        TransactionPattern(
-            keywords = listOf("book", "books", "novel", "magazine"),
-            verbs = listOf("bought", "purchased", "got"),
-            type = TransactionType.EXPENSE,
-            title = "Books",
-            description = "Book purchase",
-            category = "Education"
-        ),
-        TransactionPattern(
-            keywords = listOf("gym", "fitness", "membership", "workout"),
-            verbs = listOf("paid", "joined"),
-            type = TransactionType.EXPENSE,
-            title = "Gym",
-            description = "Fitness membership",
-            category = "Health"
-        ),
-        TransactionPattern(
-            keywords = listOf("movie", "cinema", "ticket", "entertainment"),
-            verbs = listOf("bought", "watched"),
-            type = TransactionType.EXPENSE,
-            title = "Entertainment",
-            description = "Movie or entertainment",
-            category = "Entertainment"
-        ),
-
-        // Income patterns
-        TransactionPattern(
-            keywords = listOf("salary", "paycheck", "wage", "payroll"),
-            verbs = listOf("got", "received", "earned"),
-            type = TransactionType.INCOME,
-            title = "Salary",
-            description = "Salary payment",
-            category = "Income"
-        ),
-        TransactionPattern(
-            keywords = listOf("bonus", "performance", "incentive"),
-            verbs = listOf("got", "received", "earned"),
-            type = TransactionType.INCOME,
-            title = "Bonus",
-            description = "Bonus payment",
-            category = "Income"
-        ),
-        TransactionPattern(
-            keywords = listOf("freelance", "contract", "project"),
-            verbs = listOf("got", "received", "earned"),
-            type = TransactionType.INCOME,
-            title = "Freelance",
-            description = "Freelance payment",
-            category = "Income"
-        ),
-        TransactionPattern(
-            keywords = listOf("refund", "return", "reimbursement"),
-            verbs = listOf("got", "received"),
-            type = TransactionType.INCOME,
-            title = "Refund",
-            description = "Refund received",
-            category = "Income"
-        ),
-        TransactionPattern(
-            keywords = listOf("gift", "present", "donation"),
-            verbs = listOf("received", "got"),
-            type = TransactionType.INCOME,
-            title = "Gift",
-            description = "Gift received",
-            category = "Income"
-        ),
-        TransactionPattern(
-            keywords = listOf("commission", "royalty", "affiliate"),
-            verbs = listOf("got", "received", "earned"),
-            type = TransactionType.INCOME,
-            title = "Commission",
-            description = "Commission payment",
-            category = "Income"
-        ),
-        TransactionPattern(
-            keywords = listOf("dividend", "investment", "stock"),
-            verbs = listOf("received", "got"),
-            type = TransactionType.INCOME,
-            title = "Dividend",
-            description = "Investment dividend",
-            category = "Income"
-        ),
-
-        // Generic expense patterns
-        TransactionPattern(
-            keywords = listOf("expense", "cost", "fee", "charge"),
-            verbs = listOf("had", "incurred", "paid"),
-            type = TransactionType.EXPENSE,
-            title = "Expense",
-            description = "General expense",
-            category = "Other"
-        ),
-        TransactionPattern(
-            keywords = listOf("payment", "pay", "paid"),
-            verbs = listOf("made", "did"),
-            type = TransactionType.EXPENSE,
-            title = "Payment",
-            description = "General payment",
-            category = "Other"
-        ),
-        TransactionPattern(
-            keywords = listOf("purchase", "buy", "shopping"),
-            verbs = listOf("made", "did"),
-            type = TransactionType.EXPENSE,
-            title = "Purchase",
-            description = "General purchase",
-            category = "Shopping"
-        ),
-
-        // Generic income patterns
-        TransactionPattern(
-            keywords = listOf("income", "money", "cash"),
-            verbs = listOf("received", "got", "earned"),
-            type = TransactionType.INCOME,
-            title = "Income",
-            description = "General income",
-            category = "Income"
-        )
+    private data class ScoreResult(
+        val incomeScore: Int,
+        val expenseScore: Int
     )
 
-    /**
-     * Calculate pattern matching score based on keywords, verbs, and context
-     */
-    private fun calculatePatternScore(words: List<String>, pattern: TransactionPattern): Float {
-        var score = 0f
-        val totalWords = words.size
-
-        // Keyword matching (highest weight)
-        val keywordMatches = pattern.keywords.count { keyword ->
-            words.any { word -> word.contains(keyword) || keyword.contains(word) }
-        }
-        score += (keywordMatches.toFloat() / pattern.keywords.size) * 0.6f
-
-        // Verb matching (medium weight)
-        val verbMatches = pattern.verbs.count { verb ->
-            words.any { word -> word.contains(verb) || areSynonyms(word, verb) }
-        }
-        score += (verbMatches.toFloat() / max(1, pattern.verbs.size)) * 0.3f
-
-        // Context matching (lower weight)
-        val contextScore = calculateContextScore(words, pattern)
-        score += contextScore * 0.1f
-
-        // Boost score for exact matches
-        if (words.any { word -> pattern.keywords.contains(word) }) {
-            score += 0.2f
-        }
-
-        return min(score, 1f) // Cap at 1.0
-    }
-
-    /**
-     * Calculate context score based on word proximity and patterns
-     */
-    private fun calculateContextScore(words: List<String>, pattern: TransactionPattern): Float {
-        var contextScore = 0f
-
-        // Check for expense/income indicators
-        val expenseIndicators = listOf("spent", "paid", "cost", "bought", "purchased", "expense")
-        val incomeIndicators = listOf("received", "got", "earned", "income", "salary", "bonus")
-
-        if (pattern.type == TransactionType.EXPENSE) {
-            contextScore += expenseIndicators.count { words.contains(it) }.toFloat() * 0.1f
-        } else {
-            contextScore += incomeIndicators.count { words.contains(it) }.toFloat() * 0.1f
-        }
-
-        // Check for amount proximity to keywords
-        val amountPattern = Regex("\\d+(\\.\\d{1,2})?")
-        val amountPositions = mutableListOf<Int>()
-        words.forEachIndexed { index, word ->
-            if (amountPattern.matches(word)) {
-                amountPositions.add(index)
-            }
-        }
-
-        // Boost score if amount is near relevant keywords
-        amountPositions.forEach { pos ->
-            val nearbyWords = words.subList(max(0, pos - 2), min(words.size, pos + 3))
-            if (nearbyWords.any { word -> pattern.keywords.any { keyword -> word.contains(keyword) } }) {
-                contextScore += 0.1f
-            }
-        }
-
-        return min(contextScore, 0.3f)
-    }
-
-    /**
-     * Check if two words are synonyms
-     */
-    private fun areSynonyms(word1: String, word2: String): Boolean {
-        val synonymMap = mapOf(
-            "bought" to listOf("purchased", "got", "bought"),
-            "paid" to listOf("payed", "spent", "gave"),
-            "received" to listOf("got", "earned", "obtained"),
-            "ate" to listOf("had", "consumed", "enjoyed")
-        )
-
-        return synonymMap[word1]?.contains(word2) == true ||
-               synonymMap[word2]?.contains(word1) == true
-    }
-
-    private fun extractAmount(text: String): Double {
+    internal fun extractAmount(text: String): Double {
         // Enhanced amount extraction with multiple patterns
         val patterns = listOf(
             Regex("\\$(\\d+(?:\\.\\d{1,2})?)"),  // $50, $50.99
@@ -588,100 +481,9 @@ class PatternBasedTransactionAIService : TransactionAIService {
     }
 
     /**
-     * Build vocabulary from all documents
-     */
-    private fun buildVocabulary(documents: List<String>): Set<String> {
-        return documents.flatMap { doc ->
-            doc.split("\\s+".toRegex())
-                .map { it.lowercase().trim() }
-                .filter { it.isNotEmpty() && it.length > 2 } // Filter out short words
-        }.toSet()
-    }
-
-    /**
-     * Calculate TF-IDF vector for a document
-     */
-    private fun calculateTFIDFVector(document: String, allDocuments: List<String>, vocabulary: Set<String>): Map<String, Double> {
-        val words = document.split("\\s+".toRegex()).map { it.lowercase().trim() }
-        val vector = mutableMapOf<String, Double>()
-
-        for (term in vocabulary) {
-            val tf = calculateTermFrequency(term, words)
-            val idf = calculateInverseDocumentFrequency(term, allDocuments)
-            vector[term] = tf * idf
-        }
-
-        return vector
-    }
-
-    /**
-     * Calculate Term Frequency (TF)
-     */
-    private fun calculateTermFrequency(term: String, documentWords: List<String>): Double {
-        val termCount = documentWords.count { it == term }
-        return if (documentWords.isEmpty()) 0.0 else termCount.toDouble() / documentWords.size
-    }
-
-    /**
-     * Calculate Inverse Document Frequency (IDF)
-     */
-    private fun calculateInverseDocumentFrequency(term: String, allDocuments: List<String>): Double {
-        val documentsContainingTerm = allDocuments.count { doc ->
-            doc.split("\\s+".toRegex()).any { it.lowercase().trim() == term }
-        }
-        val totalDocuments = allDocuments.size
-
-        return if (documentsContainingTerm == 0) 0.0
-        else kotlin.math.ln(totalDocuments.toDouble() / documentsContainingTerm.toDouble())
-    }
-
-    /**
-     * Calculate contextual similarity using cosine similarity
-     */
-    private fun calculateContextualSimilarity(vector1: Map<String, Double>, vector2: Map<String, Double>): Float {
-        val cosineSimilarity = cosineSimilarity(vector1, vector2)
-        // Convert to float and scale to 0-1 range
-        return (cosineSimilarity * 0.5 + 0.5).toFloat().coerceIn(0f, 1f)
-    }
-
-    /**
-     * Calculate cosine similarity between two TF-IDF vectors
-     */
-    private fun cosineSimilarity(vector1: Map<String, Double>, vector2: Map<String, Double>): Double {
-        val commonTerms = vector1.keys.intersect(vector2.keys)
-
-        if (commonTerms.isEmpty()) return 0.0
-
-        var dotProduct = 0.0
-        var norm1 = 0.0
-        var norm2 = 0.0
-
-        // Calculate dot product for common terms
-        for (term in commonTerms) {
-            val val1 = vector1[term] ?: 0.0
-            val val2 = vector2[term] ?: 0.0
-            dotProduct += val1 * val2
-        }
-
-        // Calculate norms
-        for ((term, value) in vector1) {
-            norm1 += value * value
-        }
-        for ((term, value) in vector2) {
-            norm2 += value * value
-        }
-
-        val magnitude1 = sqrt(norm1)
-        val magnitude2 = sqrt(norm2)
-
-        return if (magnitude1 == 0.0 || magnitude2 == 0.0) 0.0
-        else dotProduct / (magnitude1 * magnitude2)
-    }
-
-    /**
      * Analyze what specific issue prevented successful transaction detection
      */
-    private fun analyzeDetectionIssues(text: String, patternResult: ModelResult, amount: Double): String {
+    internal fun analyzeDetectionIssues(text: String, patternResult: ModelResult, amount: Double): String {
         val words = text.split("\\s+".toRegex()).map { it.lowercase().trim() }
 
         // Primary issue: No amount found
@@ -701,16 +503,106 @@ class PatternBasedTransactionAIService : TransactionAIService {
     /**
      * Build a detailed error message explaining why detection failed
      */
-    private fun buildDetailedErrorMessage(text: String, issue: String, confidence: Double, amount: Double): String {
+    internal fun buildDetailedErrorMessage(text: String, issue: String, confidence: Double, amount: Double): String {
         return issue
     }
 
-    private data class ModelResult(
+    /**
+     * Get context words around a target word for semantic analysis
+     */
+    private fun getContextWords(words: List<String>, targetIndex: Int, windowSize: Int): List<String> {
+        val start = maxOf(0, targetIndex - windowSize)
+        val end = minOf(words.size, targetIndex + windowSize + 1)
+        return words.subList(start, end)
+    }
+
+    /**
+     * Determine if the context indicates shopping/purchasing activity
+     */
+    private fun isShoppingContext(text: String, contextWords: List<String>): Boolean {
+        val shoppingIndicators = listOf(
+            "market", "store", "shop", "shopping", "bought", "purchase", "buy",
+            "bag", "item", "product", "goods", "mall", "supermarket", "grocery",
+            "clothes", "food", "vegetables", "fruits", "went to", "for myself"
+        )
+
+        // Check for shopping indicators in context
+        return shoppingIndicators.any { indicator ->
+            text.contains(indicator) || contextWords.contains(indicator)
+        }
+    }
+
+    /**
+     * Determine if the context indicates receiving money
+     */
+    private fun isReceivingMoneyContext(text: String, contextWords: List<String>): Boolean {
+        val moneyReceivingIndicators = listOf(
+            "from", "money", "cash", "rupees", "dollars", "received", "gave me",
+            "paid me", "lent me", "transfer", "deposit", "salary", "payment",
+            "gift", "present", "donation", "prize", "award", "bonus", "reward"
+        )
+
+        // Check for money receiving indicators in context
+        return moneyReceivingIndicators.any { indicator ->
+            text.contains(indicator) || contextWords.contains(indicator)
+        }
+    }
+
+    data class ModelResult(
         val type: TransactionType,
         val title: String,
         val description: String,
         val confidence: Double
     )
+}
+
+
+
+/**
+ * Hybrid transaction detection service
+ * Uses pattern matching as primary method and MobileBERT for edge cases
+ */
+class HybridTransactionAIService(
+    private val context: android.content.Context? = null
+) : TransactionAIService {
+
+    private val mobileBERTService by lazy {
+        context?.let { MobileBERTTransactionAIService(it) }
+    }
+
+    override suspend fun detectTransaction(text: String): Result<AIDetectedTransaction> {
+        return try {
+            println("🚀 Pure AI Transaction Detection (No Keywords):")
+            println("   Input: '$text'")
+            println("   Method: MobileBERT ML Model Only")
+
+            // PURE ML - No keyword patterns, no hardcoded rules
+            val bertService = mobileBERTService
+            if (bertService != null) {
+                val mlResult = bertService.detectTransaction(text)
+                if (mlResult.isSuccess) {
+                    val mlTransaction = mlResult.getOrNull()!!
+                    println("✅ Pure ML Success:")
+                    println("   Type: ${mlTransaction.type}")
+                    println("   Amount: $${mlTransaction.amount}")
+                    println("   Confidence: ${(mlTransaction.confidence * 100).toInt()}%")
+                    println("   Method: Pure ML - No keyword memorization")
+
+                    return mlResult // Return pure ML result
+                } else {
+                    println("⚠️ Pure ML failed - this should be rare")
+                    return mlResult
+                }
+            } else {
+                println("❌ ML service unavailable")
+                return Result.failure(Exception("Pure ML service unavailable"))
+            }
+
+        } catch (e: Exception) {
+            println("💥 Pure ML error: ${e.message}")
+            return Result.failure(Exception("Pure ML system error: ${e.message}"))
+        }
+    }
 }
 
 /**

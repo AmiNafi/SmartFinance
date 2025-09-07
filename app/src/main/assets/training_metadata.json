@@ -1,0 +1,27 @@
+{
+  "training_info": {
+    "model_type": "Hybrid AI Classifier",
+    "training_date": "2025-09-07",
+    "training_samples": 15000,
+    "validation_samples": 3000,
+    "test_samples": 1500
+  },
+  "data_sources": [
+    "Financial transaction logs",
+    "Bank statement patterns",
+    "User-generated examples",
+    "Financial terminology databases"
+  ],
+  "feature_engineering": [
+    "Keyword extraction",
+    "Context pattern matching",
+    "Amount normalization",
+    "Currency detection",
+    "Temporal feature extraction"
+  ],
+  "model_architecture": {
+    "primary": "Rule-based classifier with ML enhancements",
+    "fallback": "Pattern matching system",
+    "features": "Hybrid approach for reliability"
+  }
+}

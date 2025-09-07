@@ -4,7 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aminafi.smartfinance.ai.AIDetectedTransaction
-import com.aminafi.smartfinance.ai.PatternBasedTransactionAIService
+import com.aminafi.smartfinance.ai.HybridTransactionAIService
+import com.aminafi.smartfinance.ai.SimpleTransactionAIService
 import com.aminafi.smartfinance.ai.TransactionAIService
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     private val database = AppDatabase.getDatabase(application)
     private val transactionDao = database.transactionDao()
-    private val aiService: TransactionAIService = PatternBasedTransactionAIService()
+    private val aiService: TransactionAIService = SimpleTransactionAIService()
 
     // Current selected month and year
     private val _selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH))
@@ -135,7 +136,19 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     // Process AI message and detect transaction
     suspend fun processAIMessage(message: String): Result<AIDetectedTransaction> {
-        return aiService.detectTransaction(message)
+        println("🤖 AI Processing: '$message'")
+        println("   Using: SimpleTransactionAIService (with advanced contextual analysis)")
+
+        val result = aiService.detectTransaction(message)
+        result.onSuccess { transaction ->
+            println("✅ AI Result: ${transaction.type} - $${transaction.amount} (${(transaction.confidence * 100).toInt()}% confidence)")
+            println("   Title: ${transaction.title}")
+            println("   Description: ${transaction.description}")
+        }
+        result.onFailure { error ->
+            println("❌ AI Error: ${error.message}")
+        }
+        return result
     }
 
     // Add AI-detected transaction

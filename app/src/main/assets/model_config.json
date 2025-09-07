@@ -1,10 +1,21 @@
 {
-  "model_type": "transfer_learning_use",
-  "embedding_model": "universal-sentence-encoder",
-  "embedding_size": 512,
-  "classes": [
-    "expense",
-    "income"
-  ],
-  "accuracy": 0.9200000166893005
+  "model_type": "sklearn_random_forest_classifier",
+  "ml_algorithm": "Random Forest",
+  "feature_extraction": "TF-IDF",
+  "max_features": 1000,
+  "n_estimators": 100,
+  "accuracy": 0.8614217252396166,
+  "precision": 0.8914758885782746,
+  "recall": 0.8614217252396166,
+  "f1_score": 0.858692112692185,
+  "cv_accuracy": 0.8687300319488818,
+  "training_samples": 25000,
+  "android_compatible": true,
+  "budget_phone_optimized": true,
+  "inference_time_ms": 30,
+  "model_size_mb": 2.5,
+  "created_date": "2025-09-07",
+  "ml_technique": "ensemble_learning",
+  "feature_engineering": "tfidf_ngrams",
+  "cross_validation_folds": 5
 }
