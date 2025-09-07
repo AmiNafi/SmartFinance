@@ -195,11 +195,15 @@ fun FinanceApp(viewModel: FinanceViewModel = viewModel()) {
                                                     showAIConfirmationDialog = true
                                                     message = "" // Clear only on success
                                                 } else {
+                                                    // Get the specific error message from AI service
+                                                    val errorMessage = result.exceptionOrNull()?.message
+                                                        ?: "Sorry, I couldn't understand that transaction."
+
                                                     // Keep the message so user can edit it
                                                     coroutineScope.launch {
                                                         snackbarHostState.showSnackbar(
-                                                            message = "Sorry, I couldn't understand that transaction. Please try rephrasing.",
-                                                            duration = SnackbarDuration.Short
+                                                            message = errorMessage,
+                                                            duration = SnackbarDuration.Long
                                                         )
                                                     }
                                                 }

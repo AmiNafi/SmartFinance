@@ -21,7 +21,7 @@ data class AIDetectedTransaction(
     val type: TransactionType,
     val title: String,
     val description: String,
-    val confidence: Float
+    val confidence: Double
 )
 
 /**
@@ -36,31 +36,36 @@ class PatternBasedTransactionAIService : TransactionAIService {
 
             // Use pattern matching to classify transaction
             val patternResult = classifyWithPatterns(processedText)
-            if (patternResult.confidence > 0.3f) {
-                val amount = extractAmount(processedText)
-                if (amount > 0) {
-                    // Log the AI processing details
-                    println("🤖 AI Transaction Detection:")
-                    println("   Input: '$text'")
-                    println("   Detected: ${patternResult.title} - $${amount}")
-                    println("   Confidence: ${(patternResult.confidence * 100).toInt()}%")
-                    println("   Method: TF-IDF + Cosine Similarity (Contextual Matching)")
-                    println("   Type: ${patternResult.type}")
+            val amount = extractAmount(processedText)
 
-                    return Result.success(
-                        AIDetectedTransaction(
-                            amount = amount,
-                            type = patternResult.type,
-                            title = patternResult.title,
-                            description = patternResult.description,
-                            confidence = patternResult.confidence
-                        )
+            // Analyze potential issues
+            val issues = analyzeDetectionIssues(processedText, patternResult, amount)
+
+            if (patternResult.confidence > 0.3 && amount > 0) {
+                // Log the AI processing details
+                println("🤖 AI Transaction Detection:")
+                println("   Input: '$text'")
+                println("   Detected: ${patternResult.title} - $${amount}")
+                println("   Confidence: ${(patternResult.confidence * 100).toInt()}%")
+                println("   Method: TF-IDF + Cosine Similarity (Contextual Matching)")
+                println("   Type: ${patternResult.type}")
+
+                return Result.success(
+                    AIDetectedTransaction(
+                        amount = amount,
+                        type = patternResult.type,
+                        title = patternResult.title,
+                        description = patternResult.description,
+                        confidence = patternResult.confidence
                     )
-                }
+                )
             }
 
+            // Provide specific feedback about why detection failed
+            val errorMessage = buildDetailedErrorMessage(text, issues, patternResult.confidence, amount)
             println("❌ AI Failed to detect transaction for: '$text'")
-            Result.failure(Exception("Could not classify transaction with sufficient confidence"))
+            println("   Reason: $errorMessage")
+            Result.failure(Exception(errorMessage))
         } catch (e: Exception) {
             println("💥 AI Error: ${e.message}")
             Result.failure(e)
@@ -80,7 +85,7 @@ class PatternBasedTransactionAIService : TransactionAIService {
         val description = text
 
         // High confidence since we detected the direction
-        val confidence = 0.85f
+        val confidence = 0.85
 
         return ModelResult(moneyFlowDirection, title, description, confidence)
     }
@@ -673,11 +678,38 @@ class PatternBasedTransactionAIService : TransactionAIService {
         else dotProduct / (magnitude1 * magnitude2)
     }
 
+    /**
+     * Analyze what specific issue prevented successful transaction detection
+     */
+    private fun analyzeDetectionIssues(text: String, patternResult: ModelResult, amount: Double): String {
+        val words = text.split("\\s+".toRegex()).map { it.lowercase().trim() }
+
+        // Primary issue: No amount found
+        if (amount == 0.0) {
+            return "Missing amount - please include a price (e.g., $50 or 50 dollars)"
+        }
+
+        // Secondary issue: Low confidence (only if we have an amount)
+        if (patternResult.confidence <= 0.3) {
+            return "Unclear transaction - please be more specific about what happened"
+        }
+
+        // Fallback: Generic issue
+        return "Unable to understand transaction - please rephrase"
+    }
+
+    /**
+     * Build a detailed error message explaining why detection failed
+     */
+    private fun buildDetailedErrorMessage(text: String, issue: String, confidence: Double, amount: Double): String {
+        return issue
+    }
+
     private data class ModelResult(
         val type: TransactionType,
         val title: String,
         val description: String,
-        val confidence: Float
+        val confidence: Double
     )
 }
 
