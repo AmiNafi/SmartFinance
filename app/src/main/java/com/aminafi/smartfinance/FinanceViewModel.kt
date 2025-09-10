@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aminafi.smartfinance.ai.AIDetectedTransaction
-import com.aminafi.smartfinance.ai.HybridTransactionAIService
 import com.aminafi.smartfinance.ai.SimpleTransactionAIService
 import com.aminafi.smartfinance.ai.TransactionAIService
 import kotlinx.coroutines.ExperimentalCoroutinesApi

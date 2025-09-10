@@ -558,52 +558,7 @@ class PatternBasedTransactionAIService : TransactionAIService {
 
 
 
-/**
- * Hybrid transaction detection service
- * Uses pattern matching as primary method and MobileBERT for edge cases
- */
-class HybridTransactionAIService(
-    private val context: android.content.Context? = null
-) : TransactionAIService {
 
-    private val mobileBERTService by lazy {
-        context?.let { MobileBERTTransactionAIService(it) }
-    }
-
-    override suspend fun detectTransaction(text: String): Result<AIDetectedTransaction> {
-        return try {
-            println("🚀 Pure AI Transaction Detection (No Keywords):")
-            println("   Input: '$text'")
-            println("   Method: MobileBERT ML Model Only")
-
-            // PURE ML - No keyword patterns, no hardcoded rules
-            val bertService = mobileBERTService
-            if (bertService != null) {
-                val mlResult = bertService.detectTransaction(text)
-                if (mlResult.isSuccess) {
-                    val mlTransaction = mlResult.getOrNull()!!
-                    println("✅ Pure ML Success:")
-                    println("   Type: ${mlTransaction.type}")
-                    println("   Amount: $${mlTransaction.amount}")
-                    println("   Confidence: ${(mlTransaction.confidence * 100).toInt()}%")
-                    println("   Method: Pure ML - No keyword memorization")
-
-                    return mlResult // Return pure ML result
-                } else {
-                    println("⚠️ Pure ML failed - this should be rare")
-                    return mlResult
-                }
-            } else {
-                println("❌ ML service unavailable")
-                return Result.failure(Exception("Pure ML service unavailable"))
-            }
-
-        } catch (e: Exception) {
-            println("💥 Pure ML error: ${e.message}")
-            return Result.failure(Exception("Pure ML system error: ${e.message}"))
-        }
-    }
-}
 
 /**
  * Data class for transaction patterns in knowledge base
