@@ -136,7 +136,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     // Process AI message and detect transaction
     suspend fun processAIMessage(message: String): Result<AIDetectedTransaction> {
         println("🤖 AI Processing: '$message'")
-        println("   Using: SimpleTransactionAIService (with advanced contextual analysis)")
+        println("   Using: SimpleTransactionAIService (pattern-based analysis)")
 
         val result = aiService.detectTransaction(message)
         result.onSuccess { transaction ->

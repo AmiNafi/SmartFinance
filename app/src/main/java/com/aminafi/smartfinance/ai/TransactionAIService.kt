@@ -3,7 +3,7 @@ package com.aminafi.smartfinance.ai
 import com.aminafi.smartfinance.TransactionType
 
 /**
- * Interface for AI-powered transaction detection following SOLID principles
+ * Interface for pattern-based transaction detection following SOLID principles
  * Single Responsibility: Handle transaction detection from natural language
  */
 interface TransactionAIService {
@@ -11,7 +11,7 @@ interface TransactionAIService {
 }
 
 /**
- * Data class for AI-detected transaction
+ * Data class for pattern-detected transaction
  */
 data class AIDetectedTransaction(
     val amount: Double,

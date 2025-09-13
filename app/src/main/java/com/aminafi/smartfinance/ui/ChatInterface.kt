@@ -19,7 +19,7 @@ import com.aminafi.smartfinance.ai.AIDetectedTransaction
 import kotlinx.coroutines.launch
 
 /**
- * Chat interface for AI-powered transaction detection
+ * Chat interface for pattern-based transaction detection
  * Following Single Responsibility Principle
  */
 @OptIn(ExperimentalMaterial3Api::class)

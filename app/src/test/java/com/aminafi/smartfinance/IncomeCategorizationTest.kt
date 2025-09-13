@@ -6,7 +6,7 @@ import org.junit.Test
 import org.junit.Assert.*
 
 /**
- * Test to verify the income categorization fix
+ * Test to verify income categorization functionality
  */
 class IncomeCategorizationTest {
 

@@ -6,13 +6,13 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Pure ML-Powered Transaction Detection Service
- * Uses ONLY trained Random Forest model intelligence - NO pattern matching
+ * Advanced Pattern-Based Transaction Detection Service
+ * Uses sophisticated rule-based analysis with contextual understanding - NO ML models
  */
 class SimpleTransactionAIService : TransactionAIService {
 
     override suspend fun detectTransaction(message: String): Result<AIDetectedTransaction> {
-        // Simulate AI processing delay (realistic for ML inference)
+        // Simulate AI processing delay (realistic for complex pattern analysis)
         delay((50..150).random().toLong())
 
         val lowerMessage = message.lowercase().trim()
