@@ -59,6 +59,10 @@ dependencies {
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
+    // Koin dependencies
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose)
+
     // Pure Kotlin AI implementation - no external dependencies needed
 
     testImplementation(libs.junit)

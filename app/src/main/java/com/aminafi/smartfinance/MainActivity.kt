@@ -16,26 +16,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.aminafi.smartfinance.ai.AIDetectedTransaction
-import androidx.compose.foundation.text.KeyboardOptions
-
+import com.aminafi.smartfinance.ui.navigation.*
+import com.aminafi.smartfinance.ui.state.*
+import com.aminafi.smartfinance.ui.screens.*
+import com.aminafi.smartfinance.ui.dialogs.*
+import com.aminafi.smartfinance.ui.components.*
 import com.aminafi.smartfinance.ui.theme.SmartFinanceTheme
+import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
 
-// Screen navigation enum
-enum class Screen {
-    Home,
-    ExpenseList,
-    IncomeList
-}
-
+/**
+ * Main Activity following Single Responsibility Principle
+ * Handles only Activity lifecycle and high-level composition
+ * Uses Koin for dependency injection while maintaining all existing functionality
+ */
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -49,18 +48,19 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FinanceApp(viewModel: FinanceViewModel = viewModel()) {
+fun FinanceApp(viewModel: FinanceViewModel = koinViewModel()) {
+    // Initialize state managers following SOLID principles
+    val navigationManager = remember { NavigationManager() }
+    val uiStateManager = remember { UiStateManager() }
+    val navigationActions = remember { DefaultNavigationActions(navigationManager) }
+    val uiActions = remember { DefaultUiActions(uiStateManager) }
+
     val transactions by viewModel.currentMonthTransactions.collectAsState(initial = emptyList())
     val selectedMonth by viewModel.selectedMonth.collectAsState(initial = 0)
     val selectedYear by viewModel.selectedYear.collectAsState(initial = 2025)
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
-    var message by remember { mutableStateOf("") }
-    var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
-    var showMonthYearPicker by remember { mutableStateOf(false) }
-    var showAIConfirmationDialog by remember { mutableStateOf(false) }
-    var pendingAITransaction by remember { mutableStateOf<AIDetectedTransaction?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val summary = viewModel.getMonthlySummary(transactions)
     val (currentMonthName, currentYear, fullDate) = viewModel.getCurrentDateInfo()
@@ -68,14 +68,12 @@ fun FinanceApp(viewModel: FinanceViewModel = viewModel()) {
         Calendar.getInstance().apply { set(Calendar.MONTH, selectedMonth) }.time
     )
 
-    val snackbarHostState = remember { SnackbarHostState() }
-
     Scaffold(
         snackbarHost = {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 180.dp) // Position well above input area
+                    .padding(bottom = 180.dp)
             ) {
                 SnackbarHost(
                     hostState = snackbarHostState,
@@ -89,325 +87,139 @@ fun FinanceApp(viewModel: FinanceViewModel = viewModel()) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Fixed Month/Year Selector Header (visible on all screens)
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = {
-                            val newMonth = if (selectedMonth == 0) 11 else selectedMonth - 1
-                            val newYear = if (selectedMonth == 0) selectedYear - 1 else selectedYear
-                            viewModel.setSelectedMonth(newMonth)
-                            viewModel.setSelectedYear(newYear)
-                        }
-                    ) {
-                        Text("◀", style = MaterialTheme.typography.titleLarge)
-                    }
-
-                    Text(
-                        text = "$selectedMonthName $selectedYear",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { showMonthYearPicker = true }
-                            .padding(horizontal = 16.dp)
-                    )
-
-                    IconButton(
-                        onClick = {
-                            val newMonth = if (selectedMonth == 11) 0 else selectedMonth + 1
-                            val newYear = if (selectedMonth == 11) selectedYear + 1 else selectedYear
-                            viewModel.setSelectedMonth(newMonth)
-                            viewModel.setSelectedYear(newYear)
-                        }
-                    ) {
-                        Text("▶", style = MaterialTheme.typography.titleLarge)
-                    }
-                }
-            }
-
-            when (currentScreen) {
-                Screen.Home -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        // Current Date Display (right after header)
-                        Text(
-                            text = fullDate,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-
-                        // Cards Column (Vertical Stack) - Income First
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            IncomeCard(
-                                amount = summary.totalIncome,
-                                onClick = { currentScreen = Screen.IncomeList },
-                                monthName = selectedMonthName
-                            )
-                            ExpenseCard(
-                                amount = summary.totalExpenses,
-                                onClick = { currentScreen = Screen.ExpenseList },
-                                monthName = selectedMonthName
-                            )
-                        }
-
-                        // Spacer to fill remaining space
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        // Bottom content area (Balance + Input)
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            // Balance Bar
-                            BalanceBar(summary.balance)
-
-                            // Messenger-style input at bottom
-                            MessengerInput(
-                                message = message,
-                                onMessageChange = { message = it },
-                                onSend = {
-                                    if (message.isNotBlank()) {
-                                        val userMessage = message
-                                        // Don't clear message here - let AI processing decide
-                                        coroutineScope.launch {
-                                            try {
-                                                val result = viewModel.processAIMessage(userMessage)
-                                                if (result.isSuccess) {
-                                                    val detectedTransaction = result.getOrNull()!!
-                                                    pendingAITransaction = detectedTransaction
-                                                    showAIConfirmationDialog = true
-                                                    message = "" // Clear only on success
-                                                } else {
-                                                    // Get the specific error message from AI service
-                                                    val errorMessage = result.exceptionOrNull()?.message
-                                                        ?: "Sorry, I couldn't understand that transaction."
-
-                                                    // Keep the message so user can edit it
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar(
-                                                            message = errorMessage,
-                                                            duration = SnackbarDuration.Long
-                                                        )
-                                                    }
-                                                }
-                                            } catch (e: Exception) {
-                                                // Keep the message so user can edit it
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar(
-                                                        message = "Error processing message: ${e.message}",
-                                                        duration = SnackbarDuration.Short
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                onAddManual = {
-                                    // Show manual transaction dialog
-                                    editingTransaction = Transaction(
-                                        id = "",
-                                        amount = 0.0,
-                                        description = "",
-                                        type = TransactionType.EXPENSE,
-                                        date = Date()
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Screen.ExpenseList -> {
-                    TransactionListScreen(
-                        transactions = transactions.filter { it.type == TransactionType.EXPENSE },
-                        title = "Monthly Expenses",
-                        onBack = { currentScreen = Screen.Home },
-                        onEditTransaction = { transaction ->
-                            editingTransaction = transaction
-                        }
-                    )
-                }
-
-                Screen.IncomeList -> {
-                    TransactionListScreen(
-                        transactions = transactions.filter { it.type == TransactionType.INCOME },
-                        title = "Monthly Income",
-                        onBack = { currentScreen = Screen.Home },
-                        onEditTransaction = { transaction ->
-                            editingTransaction = transaction
-                        }
-                    )
-                }
-            }
-        }
-    }
-
-
-
-    // Transaction Dialog (Add or Edit)
-    editingTransaction?.let { transaction ->
-        if (transaction.id.isEmpty()) {
-            // New transaction - show Add dialog
-            AddTransactionDialog(
-                onDismiss = { editingTransaction = null },
-                onAddTransaction = { newTransaction ->
-                    viewModel.addTransaction(newTransaction)
-                    editingTransaction = null
-                },
+            // Month/Year Selector Header
+            MonthYearSelector(
                 selectedMonth = selectedMonth,
-                selectedYear = selectedYear
-            )
-        } else {
-            // Existing transaction - show Edit dialog
-            EditTransactionDialog(
-                transaction = transaction,
-                onDismiss = { editingTransaction = null },
-                onSave = { updatedTransaction ->
-                    viewModel.updateTransaction(updatedTransaction)
-                    editingTransaction = null
+                selectedYear = selectedYear,
+                selectedMonthName = selectedMonthName,
+                onPreviousMonth = {
+                    val newMonth = if (selectedMonth == 0) 11 else selectedMonth - 1
+                    val newYear = if (selectedMonth == 0) selectedYear - 1 else selectedYear
+                    viewModel.setSelectedMonth(newMonth)
+                    viewModel.setSelectedYear(newYear)
                 },
-                onDelete = {
-                    viewModel.deleteTransaction(transaction)
-                    editingTransaction = null
+                onNextMonth = {
+                    val newMonth = if (selectedMonth == 11) 0 else selectedMonth + 1
+                    val newYear = if (selectedMonth == 11) selectedYear + 1 else selectedYear
+                    viewModel.setSelectedMonth(newMonth)
+                    viewModel.setSelectedYear(newYear)
                 }
             )
+
+            // Screen Content
+            when (navigationManager.currentScreen) {
+                Screen.Home -> HomeScreen(
+                    viewModel = viewModel,
+                    transactions = transactions,
+                    selectedMonth = selectedMonth,
+                    selectedYear = selectedYear,
+                    selectedMonthName = selectedMonthName,
+                    fullDate = fullDate,
+                    snackbarHostState = snackbarHostState,
+                    onNavigateToExpenseList = navigationActions::navigateToExpenseList,
+                    onNavigateToIncomeList = navigationActions::navigateToIncomeList,
+                    onShowAddTransactionDialog = uiActions::showAddTransactionDialog,
+                    onShowAIConfirmationDialog = uiActions::showAIConfirmationDialog
+                )
+
+                Screen.ExpenseList -> TransactionListScreen(
+                    transactions = transactions.filter { it.type == TransactionType.EXPENSE },
+                    title = "Monthly Expenses",
+                    onBack = navigationActions::navigateToHome,
+                    onEditTransaction = uiActions::showEditTransactionDialog
+                )
+
+                Screen.IncomeList -> TransactionListScreen(
+                    transactions = transactions.filter { it.type == TransactionType.INCOME },
+                    title = "Monthly Income",
+                    onBack = navigationActions::navigateToHome,
+                    onEditTransaction = uiActions::showEditTransactionDialog
+                )
+            }
         }
     }
 
-    // AI Transaction Confirmation Dialog
-    if (showAIConfirmationDialog && pendingAITransaction != null) {
-        var editableTitle by remember { mutableStateOf(pendingAITransaction!!.title) }
-        var editableAmount by remember { mutableStateOf(pendingAITransaction!!.amount.toString()) }
-        var editableDescription by remember { mutableStateOf(pendingAITransaction!!.description) }
-        var editableType by remember { mutableStateOf(pendingAITransaction!!.type) }
-
-        AlertDialog(
-            onDismissRequest = { showAIConfirmationDialog = false },
-            title = { Text("Edit Transaction Details") },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text("AI detected transaction with ${(pendingAITransaction!!.confidence * 100).toInt()}% confidence")
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Title field
-                    OutlinedTextField(
-                        value = editableTitle,
-                        onValueChange = { editableTitle = it },
-                        label = { Text("Title") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Amount field
-                    OutlinedTextField(
-                        value = editableAmount,
-                        onValueChange = { editableAmount = it },
-                        label = { Text("Amount") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Description field
-                    OutlinedTextField(
-                        value = editableDescription,
-                        onValueChange = { editableDescription = it },
-                        label = { Text("Description") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 3
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Type selection
-                    Text("Transaction Type", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = editableType == TransactionType.INCOME,
-                            onClick = { editableType = TransactionType.INCOME }
-                        )
-                        Text("Income", modifier = Modifier.padding(start = 8.dp))
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        RadioButton(
-                            selected = editableType == TransactionType.EXPENSE,
-                            onClick = { editableType = TransactionType.EXPENSE }
-                        )
-                        Text("Expense", modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
+    // Transaction Dialogs
+    if (uiStateManager.showAddTransactionDialog && uiStateManager.editingTransaction != null) {
+        AddTransactionDialog(
+            onDismiss = uiActions::hideAddTransactionDialog,
+            onAddTransaction = { transaction ->
+                viewModel.addTransaction(transaction)
+                uiActions.hideAddTransactionDialog()
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val amount = editableAmount.toDoubleOrNull()
-                        if (amount != null && amount > 0 && editableTitle.isNotBlank()) {
-                            val editedTransaction = AIDetectedTransaction(
-                                amount = amount,
-                                type = editableType,
-                                title = editableTitle,
-                                description = editableDescription,
-                                confidence = pendingAITransaction!!.confidence
-                            )
-                            viewModel.addAIDetectedTransaction(editedTransaction)
-                            showAIConfirmationDialog = false
-                            pendingAITransaction = null
-                            // Show success snackbar
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = "✅ Transaction added successfully!",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
-                    },
-                    enabled = editableAmount.toDoubleOrNull() != null &&
-                             editableAmount.toDoubleOrNull() ?: 0.0 > 0 &&
-                             editableTitle.isNotBlank()
-                ) {
-                    Text("Add Transaction")
-                }
+            selectedMonth = selectedMonth,
+            selectedYear = selectedYear
+        )
+    }
+
+    if (uiStateManager.showEditTransactionDialog && uiStateManager.editingTransaction != null) {
+        EditTransactionDialog(
+            transaction = uiStateManager.editingTransaction!!,
+            onDismiss = uiActions::hideEditTransactionDialog,
+            onSave = { transaction ->
+                viewModel.updateTransaction(transaction)
+                uiActions.hideEditTransactionDialog()
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showAIConfirmationDialog = false
-                        pendingAITransaction = null
-                    }
-                ) {
-                    Text("Cancel")
+            onDelete = {
+                viewModel.deleteTransaction(uiStateManager.editingTransaction!!)
+                uiActions.hideEditTransactionDialog()
+            }
+        )
+    }
+
+    if (uiStateManager.showAIConfirmationDialog && uiStateManager.pendingAITransaction != null) {
+        AIConfirmationDialog(
+            pendingTransaction = uiStateManager.pendingAITransaction,
+            onDismiss = uiActions::hideAIConfirmationDialog,
+            onConfirm = { transaction ->
+                viewModel.addAIDetectedTransaction(transaction)
+                uiActions.hideAIConfirmationDialog()
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "✅ Transaction added successfully!",
+                        duration = SnackbarDuration.Short
+                    )
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun MonthYearSelector(
+    selectedMonth: Int,
+    selectedYear: Int,
+    selectedMonthName: String,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onPreviousMonth) {
+                Text("◀", style = MaterialTheme.typography.titleLarge)
+            }
+
+            Text(
+                text = "$selectedMonthName $selectedYear",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            IconButton(onClick = onNextMonth) {
+                Text("▶", style = MaterialTheme.typography.titleLarge)
+            }
+        }
     }
 }
 
@@ -950,12 +762,4 @@ fun EditTransactionDialog(
             }
         }
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FinanceAppPreview() {
-    SmartFinanceTheme {
-        FinanceApp()
-    }
 }

@@ -1,11 +1,11 @@
 package com.aminafi.smartfinance
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aminafi.smartfinance.ai.AIDetectedTransaction
-import com.aminafi.smartfinance.ai.SimpleTransactionAIService
-import com.aminafi.smartfinance.ai.TransactionAIService
+import com.aminafi.smartfinance.data.repository.TransactionRepository
+import com.aminafi.smartfinance.domain.usecase.ManageTransactionUseCase
+import com.aminafi.smartfinance.domain.usecase.ProcessAIMessageUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,17 +13,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-
+/**
+ * FinanceViewModel with Koin dependency injection
+ * All dependencies are automatically injected while maintaining exact same functionality
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
-class FinanceViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val database = AppDatabase.getDatabase(application)
-    private val transactionDao = database.transactionDao()
-    private val aiService: TransactionAIService = SimpleTransactionAIService()
+class FinanceViewModel(
+    private val processAIMessageUseCase: ProcessAIMessageUseCase,
+    private val manageTransactionUseCase: ManageTransactionUseCase,
+    private val transactionRepository: TransactionRepository
+) : ViewModel() {
 
     // Current selected month and year
     private val _selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH))
@@ -51,8 +53,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         calendar.set(Calendar.SECOND, 59)
         val endOfMonth = calendar.timeInMillis
 
-        return transactionDao.getTransactionsForMonth(startOfMonth, endOfMonth)
-            .map { entities -> entities.map { it.toTransaction() } }
+        return transactionRepository.getTransactionsForMonth(startOfMonth, endOfMonth)
     }
 
     // Update selected month and year
@@ -89,32 +90,27 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         calendar.set(Calendar.SECOND, 59)
         val endOfMonth = calendar.timeInMillis
 
-        return transactionDao.getTransactionsForMonth(startOfMonth, endOfMonth)
-            .map { entities -> entities.map { it.toTransaction() } }
+        return transactionRepository.getTransactionsForMonth(startOfMonth, endOfMonth)
     }
 
     // Add a new transaction
     fun addTransaction(transaction: Transaction) {
         viewModelScope.launch {
-            val entity = TransactionEntity.fromTransaction(transaction)
-            transactionDao.insertTransaction(entity)
+            manageTransactionUseCase.addTransaction(transaction)
         }
     }
 
     // Delete a transaction
     fun deleteTransaction(transaction: Transaction) {
         viewModelScope.launch {
-            val entity = TransactionEntity.fromTransaction(transaction)
-            transactionDao.deleteTransaction(entity)
+            manageTransactionUseCase.deleteTransaction(transaction)
         }
     }
 
     // Update a transaction
     fun updateTransaction(transaction: Transaction) {
         viewModelScope.launch {
-            val entity = TransactionEntity.fromTransaction(transaction)
-            transactionDao.deleteTransaction(entity) // Delete old
-            transactionDao.insertTransaction(entity) // Insert updated
+            manageTransactionUseCase.updateTransaction(transaction)
         }
     }
 
@@ -135,19 +131,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     // Process AI message and detect transaction
     suspend fun processAIMessage(message: String): Result<AIDetectedTransaction> {
-        println("🤖 AI Processing: '$message'")
-        println("   Using: SimpleTransactionAIService (pattern-based analysis)")
-
-        val result = aiService.detectTransaction(message)
-        result.onSuccess { transaction ->
-            println("✅ AI Result: ${transaction.type} - $${transaction.amount} (${(transaction.confidence * 100).toInt()}% confidence)")
-            println("   Title: ${transaction.title}")
-            println("   Description: ${transaction.description}")
-        }
-        result.onFailure { error ->
-            println("❌ AI Error: ${error.message}")
-        }
-        return result
+        return processAIMessageUseCase(message)
     }
 
     // Add AI-detected transaction
