@@ -351,10 +351,8 @@ fun AddTransactionDialog(
                 onClick = {
                     val amountValue = amount.toDoubleOrNull()
                     if (amountValue != null && description.isNotBlank()) {
-                        // Create date within selected month
-                        val calendar = Calendar.getInstance()
-                        calendar.set(selectedYear, selectedMonth, 15, 12, 0, 0) // Mid-month default
-                        val transactionDate = calendar.time
+                        // Use current date and time when transaction is entered
+                        val transactionDate = Date()
 
                         val transaction = Transaction(
                             id = System.currentTimeMillis().toString(),
