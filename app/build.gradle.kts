@@ -59,12 +59,6 @@ dependencies {
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // TensorFlow Lite for MobileBERT integration
-    implementation("org.tensorflow:tensorflow-lite:2.16.1")
-    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
-    implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
-    implementation("org.tensorflow:tensorflow-lite-gpu:2.16.1") // GPU delegate for budget phones
-
     // Pure Kotlin AI implementation - no external dependencies needed
 
     testImplementation(libs.junit)

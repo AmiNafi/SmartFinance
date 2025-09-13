@@ -57,6 +57,22 @@ class SimpleTransactionAIService : TransactionAIService {
 
         // ===== ADVANCED CONTEXTUAL ANALYSIS =====
 
+        // 0. DIRECT CATEGORY WORDS (highest priority)
+        if (lowerText.contains("income") || lowerText.contains("salary") ||
+            lowerText.contains("earning") || lowerText.contains("revenue") ||
+            lowerText.contains("profit") || lowerText.contains("bonus") ||
+            lowerText.contains("commission")) {
+            incomeScore += 5
+            println("🎯 DIRECT INCOME WORD: Strong INCOME signal (+5)")
+        }
+
+        if (lowerText.contains("expense") || lowerText.contains("cost") ||
+            lowerText.contains("spending") || lowerText.contains("payment") ||
+            lowerText.contains("bill") || lowerText.contains("fee")) {
+            expenseScore += 5
+            println("🎯 DIRECT EXPENSE WORD: Strong EXPENSE signal (+5)")
+        }
+
         // 1. PREPOSITION-BASED ANALYSIS (most important)
         val prepositionAnalysis = analyzePrepositions(words, lowerText)
         incomeScore += prepositionAnalysis.incomeScore
