@@ -98,8 +98,6 @@ SmartFinance/
 │   │   │   │       ├── ManageTransactionUseCaseImpl.kt
 │   │   │   │       ├── ProcessAIMessageUseCase.kt
 │   │   │   │       └── ProcessAIMessageUseCaseImpl.kt
-│   │   │   ├── presentation/     # Presentation layer
-│   │   │   │   └── FinanceViewModel.kt # Main ViewModel
 │   │   │   ├── ui/               # UI layer
 │   │   │   │   ├── App.kt           # Main composable
 │   │   │   │   ├── ChatInterface.kt # Chat UI component
@@ -111,13 +109,11 @@ SmartFinance/
 │   │   │   │   ├── dialogs/         # Dialog components
 │   │   │   │   │   └── TransactionDialogs.kt
 │   │   │   │   ├── navigation/      # Navigation management
-│   │   │   │   │   ├── NavigationManager.kt
-│   │   │   │   │   └── NavigationState.kt
+│   │   │   │   │   └── NavigationManager.kt
 │   │   │   │   ├── screens/         # Screen components
 │   │   │   │   │   ├── HomeScreen.kt
 │   │   │   │   │   └── TransactionListScreen.kt
 │   │   │   │   ├── state/           # UI state management
-│   │   │   │   │   ├── UiState.kt
 │   │   │   │   │   └── UiStateManager.kt
 │   │   │   │   └── theme/           # Theming components
 │   │   │   │       ├── Color.kt
@@ -156,7 +152,7 @@ SmartFinance/
 #### Presentation Layer (Business Logic for UI)
 - **ViewModels**: `FinanceViewModel` with StateFlow for reactive UI updates
 - **State Management**: `UiStateManager` for complex application state
-- **Navigation**: `NavigationManager` and `NavigationState` for screen transitions
+- **Navigation**: `NavigationManager` for screen transitions
 
 #### UI Layer (User Interface)
 - **Compose Components**: Declarative UI with `App.kt` as root composable
