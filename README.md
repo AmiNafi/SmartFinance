@@ -4,8 +4,6 @@ A modern Android finance management application with intelligent transaction pro
 
 ## Our Vision
 
-**In a world where financial apps demand constant connectivity and drain precious resources, SmartFinance stands apart as a beacon of thoughtful design and user empowerment.**
-
 We believe that **true financial freedom begins with privacy, accessibility, and independence**. That's why SmartFinance is crafted to be **100% offline**, running entirely on your device without requiring internet access or cloud services. No data leaves your phone, ensuring your financial information remains completely private and secure.
 
 **Designed for everyone, regardless of their device's capabilities**, SmartFinance is optimized to run smoothly on budget phones with minimal system requirements. We understand that financial management shouldn't be a luxury reserved for flagship devices - it's a fundamental need that should be accessible to all.
@@ -26,18 +24,21 @@ We believe that **true financial freedom begins with privacy, accessibility, and
 - **Smart Amount Extraction**: Automatically detects monetary values from text
 - **Intelligent Categorization**: Automatically classifies income vs expenses using rule-based logic
 - **Smart Title Generation**: Creates meaningful transaction descriptions through pattern analysis
+- **Chat Interface**: Interactive messenger-style input for natural transaction entry
 
 ### Financial Management
 - **Real-time Balance Tracking**: Live calculation of income, expenses, and balance
 - **Monthly Overview**: Navigate through different months to view historical data
 - **Transaction History**: Complete list of all financial transactions
 - **Visual Analytics**: Clean, intuitive UI for financial insights
+- **Transaction Management**: Edit, delete, and categorize transactions with ease
 
 ### Modern UI/UX
 - **Jetpack Compose**: Built with modern Android UI toolkit
 - **Material Design 3**: Latest Material Design components and theming
 - **Responsive Design**: Optimized for various screen sizes
 - **Dark/Light Theme**: Automatic theme adaptation
+- **Intuitive Navigation**: Seamless screen transitions and state management
 
 ### Technical Excellence
 - **Clean Architecture**: Domain-Driven Design with clear separation of concerns
@@ -73,65 +74,66 @@ SmartFinance/
 │   │   ├── java/com/aminafi/smartfinance/
 │   │   │   ├── ai/               # AI processing components
 │   │   │   │   ├── analyzers/       # AI analysis interfaces & implementations
-│   │   │   │   └── SimpleTransactionAIService.kt
+│   │   │   │   │   ├── AmountExtractor.kt
+│   │   │   │   │   ├── AmountExtractorInterface.kt
+│   │   │   │   │   ├── TitleGenerator.kt
+│   │   │   │   │   ├── TitleGeneratorInterface.kt
+│   │   │   │   │   ├── TransactionTypeAnalyzer.kt
+│   │   │   │   │   └── TransactionTypeAnalyzerInterface.kt
+│   │   │   │   ├── SimpleTransactionAIService.kt
+│   │   │   │   └── TransactionAIService.kt
 │   │   │   ├── data/             # Data layer
-│   │   │   │   └── repository/      # Repository pattern implementation
+│   │   │   │   ├── repository/      # Repository pattern implementation
+│   │   │   │   │   ├── TransactionRepository.kt
+│   │   │   │   │   └── TransactionRepositoryImpl.kt
+│   │   │   │   ├── AppDatabase.kt   # Room database configuration
+│   │   │   │   ├── Transaction.kt   # Domain model
+│   │   │   │   ├── TransactionDao.kt # Data access object
+│   │   │   │   └── TransactionEntity.kt # Database entity
 │   │   │   ├── di/               # Dependency injection
 │   │   │   │   └── AppModule.kt     # Koin module definitions
 │   │   │   ├── domain/           # Domain layer (business logic)
 │   │   │   │   └── usecase/         # Use cases for business operations
-│   │   │   ├── ui/               # Presentation layer
-│   │   │   │   ├── App.kt            # Main app composable (refactored)
-│   │   │   │   ├── components/       # Reusable UI components
-│   │   │   │   │   ├── FinanceComponents.kt     # Financial UI components
-│   │   │   │   │   ├── MessengerInput.kt        # Message input component
-│   │   │   │   │   ├── MonthYearSelector.kt     # Month/year navigation
-│   │   │   │   │   └── TransactionComponents.kt # Transaction UI components
-│   │   │   │   ├── dialogs/          # Dialog components
-│   │   │   │   │   └── TransactionDialogs.kt    # Transaction dialogs
-│   │   │   │   ├── navigation/       # Navigation management
-│   │   │   │   ├── screens/          # Screen components
-│   │   │   │   │   ├── HomeScreen.kt            # Home screen
-│   │   │   │   │   └── TransactionListScreen.kt # Transaction list screen
-│   │   │   │   └── state/            # UI state management
-│   │   │   ├── FinanceViewModel.kt   # Main ViewModel
-│   │   │   ├── MainActivity.kt       # Main activity (25 lines - refactored)
+│   │   │   │       ├── ManageTransactionUseCase.kt
+│   │   │   │       ├── ManageTransactionUseCaseImpl.kt
+│   │   │   │       ├── ProcessAIMessageUseCase.kt
+│   │   │   │       └── ProcessAIMessageUseCaseImpl.kt
+│   │   │   ├── ui/               # UI layer
+│   │   │   │   ├── App.kt           # Main composable
+│   │   │   │   ├── ChatInterface.kt # Chat UI component
+│   │   │   │   ├── components/      # Reusable UI components
+│   │   │   │   │   ├── FinanceComponents.kt
+│   │   │   │   │   ├── MessengerInput.kt
+│   │   │   │   │   ├── MonthYearSelector.kt
+│   │   │   │   │   └── TransactionComponents.kt
+│   │   │   │   ├── dialogs/         # Dialog components
+│   │   │   │   │   └── TransactionDialogs.kt
+│   │   │   │   ├── navigation/      # Navigation management
+│   │   │   │   │   └── NavigationManager.kt
+│   │   │   │   ├── screens/         # Screen components
+│   │   │   │   │   ├── HomeScreen.kt
+│   │   │   │   │   └── TransactionListScreen.kt
+│   │   │   │   ├── state/           # UI state management
+│   │   │   │   │   └── UiStateManager.kt
+│   │   │   │   └── theme/           # Theming components
+│   │   │   │       ├── Color.kt
+│   │   │   │       ├── Theme.kt
+│   │   │   │       └── Type.kt
+│   │   │   ├── FinanceViewModel.kt  # Legacy ViewModel (being phased out)
+│   │   │   ├── MainActivity.kt      # Main activity
 │   │   │   └── SmartFinanceApplication.kt
-│   │   └── res/                      # Android resources
-│   └── build.gradle.kts              # App-level build configuration
-├── gradle/                        # Gradle wrapper and libs
-│   └── libs.versions.toml            # Version catalog
-├── build.gradle.kts               # Project-level build configuration
-├── README.md                      # Project documentation
-└── gradlew                        # Gradle wrapper scripts
+│   │   └── res/                     # Android resources
+│   │       ├── drawable/            # App icons and graphics
+│   │       ├── mipmap-*/            # Launcher icons
+│   │       ├── values/              # String resources and themes
+│   │       └── xml/                 # Backup and data extraction rules
+│   └── build.gradle.kts             # App-level build configuration
+├── gradle/                       # Gradle wrapper and libs
+│   └── libs.versions.toml           # Version catalog
+├── build.gradle.kts              # Project-level build configuration
+├── README.md                     # Project documentation
+└── gradlew                       # Gradle wrapper scripts
 ```
-
-## Recent Refactoring (September 2025)
-
-### Code Quality Improvements
-**MainActivity Refactoring**: Transformed from a monolithic 600+ line file into a clean, focused 25-line activity that follows SOLID principles perfectly.
-
-### Before vs After
-- **Before**: MainActivity contained all UI components, business logic, and state management
-- **After**: MainActivity only handles Android lifecycle; all UI logic properly separated
-
-### New File Structure
-- **`ui/App.kt`**: Main app composable with navigation and state management
-- **`ui/components/`**: Properly organized reusable components:
-  - `FinanceComponents.kt`: Financial UI components (cards, summaries, balance)
-  - `MessengerInput.kt`: Message input with AI processing
-  - `MonthYearSelector.kt`: Month/year navigation component
-  - `TransactionComponents.kt`: Transaction list and item components
-- **`ui/dialogs/TransactionDialogs.kt`**: All transaction-related dialogs
-- **`ui/screens/`**: Screen-level components properly separated
-
-### Benefits Achieved
-- ✅ **Single Responsibility**: Each file has one clear purpose
-- ✅ **Maintainability**: Easy to modify individual components
-- ✅ **Testability**: Components can be tested in isolation
-- ✅ **Reusability**: UI components can be reused across screens
-- ✅ **Clean Architecture**: Perfect separation of concerns
-- ✅ **SOLID Compliance**: All design principles properly implemented
 
 ## Architecture Overview
 
@@ -139,23 +141,29 @@ SmartFinance/
 
 #### Domain Layer (Business Logic)
 - **Use Cases**: `ProcessAIMessageUseCase`, `ManageTransactionUseCase`
-- **Entities**: `Transaction`, `MonthlySummary`
+- **Entities**: `Transaction` domain model
 - **Interfaces**: Repository contracts, AI analyzer contracts
 
 #### Data Layer (Data Access)
 - **Repository Pattern**: `TransactionRepository` interface and implementation
-- **Local Storage**: Room database with DAOs
-- **Data Models**: Database entities and DTOs
+- **Local Storage**: Room database with `TransactionDao`
+- **Data Models**: `TransactionEntity` for database, `Transaction` for domain
 
-#### Presentation Layer (UI)
-- **MVVM Pattern**: ViewModels with LiveData/StateFlow
-- **Compose UI**: Declarative UI components
-- **State Management**: UiStateManager for complex state
-- **Navigation**: Compose Navigation for screen transitions
+#### Presentation Layer (Business Logic for UI)
+- **ViewModels**: `FinanceViewModel` with StateFlow for reactive UI updates
+- **State Management**: `UiStateManager` for complex application state
+- **Navigation**: `NavigationManager` for screen transitions
+
+#### UI Layer (User Interface)
+- **Compose Components**: Declarative UI with `App.kt` as root composable
+- **Screens**: `HomeScreen`, `TransactionListScreen` for different app sections
+- **Components**: Reusable UI elements (`MessengerInput`, `MonthYearSelector`, etc.)
+- **Dialogs**: `TransactionDialogs` for user interactions
+- **Theme**: Custom theming with `Color.kt`, `Theme.kt`, `Type.kt`
 
 #### Dependency Injection
-- **Koin Modules**: Centralized dependency configuration
-- **Interface Binding**: Runtime implementation selection
+- **Koin Modules**: Centralized dependency configuration in `AppModule.kt`
+- **Interface Binding**: Runtime implementation selection for different environments
 - **Scope Management**: Singleton, factory, and viewModel scopes
 
 ## Getting Started
