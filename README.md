@@ -81,22 +81,57 @@ SmartFinance/
 │   │   │   ├── domain/           # Domain layer (business logic)
 │   │   │   │   └── usecase/         # Use cases for business operations
 │   │   │   ├── ui/               # Presentation layer
-│   │   │   │   ├── components/      # Reusable UI components
-│   │   │   │   ├── dialogs/         # Dialog components
-│   │   │   │   ├── navigation/      # Navigation management
-│   │   │   │   ├── screens/         # Screen components
-│   │   │   │   └── state/           # UI state management
-│   │   │   ├── FinanceViewModel.kt  # Main ViewModel
-│   │   │   ├── MainActivity.kt      # Main activity
+│   │   │   │   ├── App.kt            # Main app composable (refactored)
+│   │   │   │   ├── components/       # Reusable UI components
+│   │   │   │   │   ├── FinanceComponents.kt     # Financial UI components
+│   │   │   │   │   ├── MessengerInput.kt        # Message input component
+│   │   │   │   │   ├── MonthYearSelector.kt     # Month/year navigation
+│   │   │   │   │   └── TransactionComponents.kt # Transaction UI components
+│   │   │   │   ├── dialogs/          # Dialog components
+│   │   │   │   │   └── TransactionDialogs.kt    # Transaction dialogs
+│   │   │   │   ├── navigation/       # Navigation management
+│   │   │   │   ├── screens/          # Screen components
+│   │   │   │   │   ├── HomeScreen.kt            # Home screen
+│   │   │   │   │   └── TransactionListScreen.kt # Transaction list screen
+│   │   │   │   └── state/            # UI state management
+│   │   │   ├── FinanceViewModel.kt   # Main ViewModel
+│   │   │   ├── MainActivity.kt       # Main activity (25 lines - refactored)
 │   │   │   └── SmartFinanceApplication.kt
-│   │   └── res/                     # Android resources
-│   └── build.gradle.kts             # App-level build configuration
-├── gradle/                       # Gradle wrapper and libs
-│   └── libs.versions.toml           # Version catalog
-├── build.gradle.kts              # Project-level build configuration
-├── README.md                     # Project documentation
-└── gradlew                       # Gradle wrapper scripts
+│   │   └── res/                      # Android resources
+│   └── build.gradle.kts              # App-level build configuration
+├── gradle/                        # Gradle wrapper and libs
+│   └── libs.versions.toml            # Version catalog
+├── build.gradle.kts               # Project-level build configuration
+├── README.md                      # Project documentation
+└── gradlew                        # Gradle wrapper scripts
 ```
+
+## Recent Refactoring (September 2025)
+
+### Code Quality Improvements
+**MainActivity Refactoring**: Transformed from a monolithic 600+ line file into a clean, focused 25-line activity that follows SOLID principles perfectly.
+
+### Before vs After
+- **Before**: MainActivity contained all UI components, business logic, and state management
+- **After**: MainActivity only handles Android lifecycle; all UI logic properly separated
+
+### New File Structure
+- **`ui/App.kt`**: Main app composable with navigation and state management
+- **`ui/components/`**: Properly organized reusable components:
+  - `FinanceComponents.kt`: Financial UI components (cards, summaries, balance)
+  - `MessengerInput.kt`: Message input with AI processing
+  - `MonthYearSelector.kt`: Month/year navigation component
+  - `TransactionComponents.kt`: Transaction list and item components
+- **`ui/dialogs/TransactionDialogs.kt`**: All transaction-related dialogs
+- **`ui/screens/`**: Screen-level components properly separated
+
+### Benefits Achieved
+- ✅ **Single Responsibility**: Each file has one clear purpose
+- ✅ **Maintainability**: Easy to modify individual components
+- ✅ **Testability**: Components can be tested in isolation
+- ✅ **Reusability**: UI components can be reused across screens
+- ✅ **Clean Architecture**: Perfect separation of concerns
+- ✅ **SOLID Compliance**: All design principles properly implemented
 
 ## Architecture Overview
 
