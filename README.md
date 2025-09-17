@@ -27,11 +27,13 @@ We believe that **true financial freedom begins with privacy, accessibility, and
 - **Chat Interface**: Interactive messenger-style input for natural transaction entry
 
 ### Financial Management
-- **Real-time Balance Tracking**: Live calculation of income, expenses, and balance
-- **Monthly Overview**: Navigate through different months to view historical data
-- **Transaction History**: Complete list of all financial transactions
-- **Visual Analytics**: Clean, intuitive UI for financial insights
+- **Dual Balance Tracking**: Monthly balance + Total balance across all time
+- **Real-time Calculations**: Live updates of income, expenses, savings, and balances
+- **Monthly Navigation**: Navigate through different months to view historical data
+- **Transaction History**: Complete list of all financial transactions with proper categorization
+- **Visual Analytics**: Clean, intuitive UI for comprehensive financial insights
 - **Transaction Management**: Edit, delete, and categorize transactions with ease
+- **Savings Integration**: Full support for savings transactions with dedicated tracking
 
 ### Modern UI/UX
 - **Jetpack Compose**: Built with modern Android UI toolkit
@@ -151,6 +153,7 @@ SmartFinance/
 
 #### Presentation Layer (Business Logic for UI)
 - **ViewModels**: `FinanceViewModel` with StateFlow for reactive UI updates
+- **Data Models**: `FinancialSummary` for dual balance tracking (monthly + total)
 - **State Management**: `UiStateManager` for complex application state
 - **Navigation**: `NavigationManager` for screen transitions
 
@@ -206,16 +209,19 @@ SmartFinance/
 4. Confirm and save the transaction
 
 #### Method 2: Manual Entry
-1. Tap the "+" button
-2. Fill in description, amount, and select type (Income/Expense)
-3. The date is automatically set to current date/time
-4. Save the transaction
+1. Select the desired month/year using the month navigator at the top
+2. Tap the "+" button
+3. Fill in description, amount, and select type (Income/Expense/Savings)
+4. The transaction is automatically dated to the selected month
+5. Save the transaction - it will appear in the selected month's data
 
 ### Viewing Financial Data
-- **Home Screen**: Current month overview with balance, income, and expenses
-- **Month Navigation**: Use arrow buttons to navigate between months
-- **Transaction Lists**: Tap income/expense cards to see detailed lists
+- **Home Screen**: Dual balance display (monthly + total) with income, expenses, and savings
+- **Month Navigation**: Use arrow buttons to navigate between months and see historical data
+- **Transaction Lists**: Tap income/expense/savings cards to see detailed categorized lists
+- **Balance Tracking**: Monitor both current month performance and overall financial health
 - **Edit Transactions**: Long press any transaction to edit or delete
+- **Date Management**: Transactions are properly dated to selected months for accurate tracking
 
 ## Testing
 

@@ -75,12 +75,26 @@ class TransactionTypeAnalyzer : TransactionTypeAnalyzerInterface {
     }
 
     private fun analyzeDirectExpenseWords(text: String): Int {
-        return if (text.contains("expense") || text.contains("cost") ||
+        var expenseScore = 0
+
+        // Direct expense keywords
+        if (text.contains("expense") || text.contains("cost") ||
             text.contains("spending") || text.contains("payment") ||
             text.contains("bill") || text.contains("fee")) {
             println("🎯 DIRECT EXPENSE WORD: Strong EXPENSE signal (+5)")
-            5
-        } else 0
+            expenseScore += 5
+        }
+
+        // Loss-related keywords (lost, missing, stolen, etc.)
+        if (text.contains("lost") || text.contains("missing") ||
+            text.contains("stolen") || text.contains("theft") ||
+            text.contains("robbed") || text.contains("gone") ||
+            text.contains("disappeared")) {
+            println("💸 LOSS DETECTED: Money lost/stolen = EXPENSE (+4)")
+            expenseScore += 4
+        }
+
+        return expenseScore
     }
 
     private fun analyzePrepositions(words: List<String>, text: String): ScoreResult {
@@ -349,24 +363,231 @@ class TransactionTypeAnalyzer : TransactionTypeAnalyzerInterface {
         return ScoreResult(incomeScore, expenseScore)
     }
 
-    private fun determineFinalType(incomeScore: Int, expenseScore: Int, text: String, words: List<String>): TransactionType {
-        println("🤖 SCORES - Income: $incomeScore, Expense: $expenseScore")
+    private fun analyzeSavingsPatterns(text: String): Int {
+        var savingsScore = 0
+        val lowerText = text.lowercase()
 
+        // Direct savings keywords with weights
+        val savingsKeywords = mapOf(
+            "sav" to 2, "saving" to 2, "saved" to 3, "savings" to 4,
+            "deposit" to 3, "deposited" to 4, "bank" to 2, "account" to 2,
+            "put away" to 4, "set aside" to 4, "emergency" to 3, "fund" to 3,
+            "future" to 3, "long term" to 3, "accumulate" to 3, "build" to 2,
+            "invest" to 2, "investment" to 3, "retirement" to 3, "pension" to 3
+        )
+
+        for ((keyword, keywordWeight) in savingsKeywords) {
+            if (lowerText.contains(keyword)) {
+                savingsScore += keywordWeight
+                println("💰 SAVINGS: '$keyword' detected (+$keywordWeight)")
+            }
+        }
+
+        // Money flow to bank/account patterns with context
+        val bankPatterns = listOf(
+            "to bank" to 4, "to savings" to 5, "to account" to 4,
+            "into savings" to 5, "into bank" to 4, "into account" to 4,
+            "bank account" to 3, "savings account" to 4,
+            "transfer to savings" to 5, "moved to bank" to 4
+        )
+
+        for ((pattern, patternWeight) in bankPatterns) {
+            if (lowerText.contains(pattern)) {
+                savingsScore += patternWeight
+                println("🏦 BANK FLOW: '$pattern' detected (+$patternWeight)")
+            }
+        }
+
+        // Smart context analysis
+        savingsScore += analyzeSavingsContext(lowerText)
+
+        // Exclude payment patterns with smart detection
+        val exclusionPatterns = listOf(
+            "paid bill" to 5, "paid rent" to 5, "paid utilities" to 5,
+            "paid debt" to 5, "paid loan" to 5, "paid credit" to 5,
+            "bought" to 4, "purchase" to 4, "shopping" to 3,
+            "cost" to 3, "fee" to 3, "charge" to 3
+        )
+
+        for ((pattern, penalty) in exclusionPatterns) {
+            if (lowerText.contains(pattern)) {
+                // Check if it's actually a savings context despite containing payment words
+                if (!isSavingsOverrideContext(lowerText, pattern)) {
+                    savingsScore -= penalty
+                    println("❌ EXCLUSION: '$pattern' detected (-$penalty)")
+                } else {
+                    println("⚡ OVERRIDE: '$pattern' in savings context (+1)")
+                    savingsScore += 1
+                }
+            }
+        }
+
+        // Boost score for clear savings intent
+        if (savingsScore >= 8 && hasClearSavingsIntent(lowerText)) {
+            savingsScore += 2
+            println("🚀 CLEAR INTENT: High confidence savings (+2)")
+        }
+
+        return maxOf(0, savingsScore)
+    }
+
+    private fun analyzeSavingsContext(text: String): Int {
+        var contextScore = 0
+
+        // Time-based context (future oriented)
+        val futureWords = listOf("next month", "next year", "in future", "later", "tomorrow")
+        for (word in futureWords) {
+            if (text.contains(word)) {
+                contextScore += 2
+                println("⏰ FUTURE: '$word' context (+2)")
+            }
+        }
+
+        // Purpose-based context
+        val purposeWords = listOf("for vacation", "for house", "for car", "for education", "for kids")
+        for (word in purposeWords) {
+            if (text.contains(word)) {
+                contextScore += 3
+                println("🎯 PURPOSE: '$word' context (+3)")
+            }
+        }
+
+        // Amount-based context (larger amounts often indicate savings)
+        val words = text.split("\\s+".toRegex())
+        val amountWords = words.filter { it.matches(Regex("\\$\\d+")) }
+        if (amountWords.isNotEmpty()) {
+            val avgAmount = amountWords.mapNotNull {
+                it.replace("$", "").toDoubleOrNull()
+            }.average()
+
+            if (avgAmount > 100) { // Large amounts more likely to be savings
+                contextScore += 2
+                println("💵 LARGE AMOUNT: High value suggests savings (+2)")
+            }
+        }
+
+        return contextScore
+    }
+
+    private fun isSavingsOverrideContext(text: String, paymentPattern: String): Boolean {
+        // Check if payment pattern is actually in a savings context
+        val savingsOverrideWords = listOf(
+            "savings", "deposit", "bank", "account", "saved",
+            "emergency", "fund", "future", "invest"
+        )
+
+        return savingsOverrideWords.any { overrideWord ->
+            text.contains(overrideWord) && text.indexOf(overrideWord) > text.indexOf(paymentPattern)
+        }
+    }
+
+    private fun hasClearSavingsIntent(text: String): Boolean {
+        // Check for multiple savings indicators
+        val savingsIndicators = listOf(
+            "savings", "deposit", "bank", "account", "emergency",
+            "fund", "future", "invest", "save", "put away"
+        )
+
+        val indicatorCount = savingsIndicators.count { text.contains(it) }
+        return indicatorCount >= 2 // Multiple indicators = clear intent
+    }
+
+    private fun determineFinalType(incomeScore: Int, expenseScore: Int, text: String, words: List<String>): TransactionType {
+        // Add savings analysis
+        val savingsScore = analyzeSavingsPatterns(text.lowercase())
+
+        println("🤖 SCORES - Income: $incomeScore, Expense: $expenseScore, Savings: $savingsScore")
+
+        // Calculate confidence levels
+        val totalScore = incomeScore + expenseScore + savingsScore
+        val maxScore = maxOf(incomeScore, expenseScore, savingsScore)
+
+        val confidence = if (totalScore > 0) maxScore.toDouble() / totalScore else 0.0
+        println("🎯 CONFIDENCE: ${(confidence * 100).toInt()}%")
+
+        // Smart decision making with confidence thresholds
         return when {
-            incomeScore > expenseScore -> {
+            // High confidence savings detection
+            savingsScore > incomeScore && savingsScore > expenseScore && savingsScore >= 8 -> {
+                println("🤖 RESULT: SAVINGS (High Confidence)")
+                TransactionType.SAVINGS
+            }
+
+            // Medium confidence with context boost
+            savingsScore > incomeScore && savingsScore > expenseScore && hasStrongSavingsContext(text) -> {
+                println("🤖 RESULT: SAVINGS (Context Boost)")
+                TransactionType.SAVINGS
+            }
+
+            // Standard income detection
+            incomeScore > expenseScore && incomeScore > savingsScore -> {
                 println("🤖 RESULT: INCOME")
                 TransactionType.INCOME
             }
-            expenseScore > incomeScore -> {
+
+            // Standard expense detection
+            expenseScore > incomeScore && expenseScore > savingsScore -> {
                 println("🤖 RESULT: EXPENSE")
                 TransactionType.EXPENSE
             }
-            else -> {
-                val sentenceContext = analyzeSentenceContext(text, words)
-                println("🤖 RESULT: $sentenceContext (sentence analysis)")
-                sentenceContext
+
+            // Ambiguity resolution
+            else -> resolveAmbiguity(incomeScore, expenseScore, savingsScore, text, words)
+        }
+    }
+
+    private fun hasStrongSavingsContext(text: String): Boolean {
+        val strongIndicators = listOf(
+            "savings account", "emergency fund", "put away", "set aside",
+            "for future", "long term", "deposit to", "bank savings"
+        )
+        return strongIndicators.any { text.contains(it) }
+    }
+
+    private fun resolveAmbiguity(incomeScore: Int, expenseScore: Int, savingsScore: Int, text: String, words: List<String>): TransactionType {
+        println("🤔 AMBIGUITY: Resolving with advanced analysis...")
+
+        // Check for question marks or uncertainty
+        if (text.contains("?") || text.contains("maybe") || text.contains("perhaps")) {
+            println("❓ UNCERTAIN: Defaulting to EXPENSE")
+            return TransactionType.EXPENSE
+        }
+
+        // Check for negation
+        if (words.any { it == "not" || it == "n't" || it == "never" }) {
+            println("🚫 NEGATION: Defaulting to EXPENSE")
+            return TransactionType.EXPENSE
+        }
+
+        // Amount-based decision (large amounts often indicate savings)
+        val amountPattern = Regex("\\$?(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)")
+        val amounts = amountPattern.findAll(text).mapNotNull {
+            it.groupValues[1].replace(",", "").toDoubleOrNull()
+        }.toList()
+
+        if (amounts.isNotEmpty()) {
+            val avgAmount = amounts.average()
+            if (avgAmount > 500 && savingsScore > 0) {
+                println("💰 LARGE AMOUNT + SAVINGS: Choosing SAVINGS")
+                return TransactionType.SAVINGS
+            }
+            if (avgAmount < 50 && expenseScore > 0) {
+                println("🪙 SMALL AMOUNT + EXPENSE: Choosing EXPENSE")
+                return TransactionType.EXPENSE
             }
         }
+
+        // Default fallback based on highest score
+        val scores = mapOf(
+            TransactionType.INCOME to incomeScore,
+            TransactionType.EXPENSE to expenseScore,
+            TransactionType.SAVINGS to savingsScore
+        )
+
+        val bestType = scores.maxByOrNull { it.value }?.key ?: TransactionType.EXPENSE
+        println("📊 DEFAULT: Choosing $bestType (highest score)")
+
+        return bestType
     }
 
     private fun analyzeSentenceContext(text: String, words: List<String>): TransactionType {

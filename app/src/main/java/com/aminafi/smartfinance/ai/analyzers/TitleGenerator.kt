@@ -72,6 +72,7 @@ class TitleGenerator : TitleGeneratorInterface {
         return when (type) {
             TransactionType.INCOME -> "Income Transaction"
             TransactionType.EXPENSE -> "Expense Transaction"
+            TransactionType.SAVINGS -> "Savings Transaction"
         }
     }
 }

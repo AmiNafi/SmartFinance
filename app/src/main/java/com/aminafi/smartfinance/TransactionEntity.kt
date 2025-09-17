@@ -19,7 +19,12 @@ data class TransactionEntity(
             id = id,
             amount = amount,
             description = description,
-            type = if (type == "INCOME") TransactionType.INCOME else TransactionType.EXPENSE,
+            type = when (type) {
+                "INCOME" -> TransactionType.INCOME
+                "EXPENSE" -> TransactionType.EXPENSE
+                "SAVINGS" -> TransactionType.SAVINGS
+                else -> TransactionType.EXPENSE // Fallback for unknown types
+            },
             date = Date(date)
         )
     }

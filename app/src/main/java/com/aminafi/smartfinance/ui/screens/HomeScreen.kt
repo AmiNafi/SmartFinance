@@ -27,6 +27,7 @@ import java.util.*
 fun HomeScreen(
     viewModel: FinanceViewModel,
     transactions: List<Transaction>,
+    allTransactions: List<Transaction>,
     selectedMonth: Int,
     selectedYear: Int,
     selectedMonthName: String,
@@ -34,10 +35,11 @@ fun HomeScreen(
     snackbarHostState: SnackbarHostState,
     onNavigateToExpenseList: () -> Unit,
     onNavigateToIncomeList: () -> Unit,
+    onNavigateToSavingsList: () -> Unit,
     onShowAddTransactionDialog: (Transaction) -> Unit,
     onShowAIConfirmationDialog: (AIDetectedTransaction) -> Unit
 ) {
-    val summary = viewModel.getMonthlySummary(transactions)
+    val summary = viewModel.getMonthlySummary(transactions, allTransactions)
     var message by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
@@ -52,7 +54,7 @@ fun HomeScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Cards Column (Vertical Stack) - Income First
+        // Cards Column (Vertical Stack) - Income, Expenses, Savings
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -69,6 +71,11 @@ fun HomeScreen(
                 onClick = onNavigateToExpenseList,
                 monthName = selectedMonthName
             )
+            SavingsCard(
+                amount = summary.totalSavings,
+                onClick = onNavigateToSavingsList,
+                monthName = selectedMonthName
+            )
         }
 
         // Spacer to fill remaining space
@@ -79,7 +86,7 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             // Balance Bar
-            BalanceBar(summary.balance)
+            BalanceBar(summary.monthlyBalance, summary.totalBalance)
 
             // Messenger-style input at bottom
             MessengerInput(

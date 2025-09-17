@@ -28,7 +28,8 @@ class NavigationManager {
 enum class Screen {
     Home,
     ExpenseList,
-    IncomeList
+    IncomeList,
+    SavingsList
 }
 
 /**
@@ -38,6 +39,7 @@ interface NavigationActions {
     fun navigateToHome()
     fun navigateToExpenseList()
     fun navigateToIncomeList()
+    fun navigateToSavingsList()
     fun navigateBack()
 }
 
@@ -58,6 +60,10 @@ class DefaultNavigationActions(
 
     override fun navigateToIncomeList() {
         navigationManager.navigateTo(Screen.IncomeList)
+    }
+
+    override fun navigateToSavingsList() {
+        navigationManager.navigateTo(Screen.SavingsList)
     }
 
     override fun navigateBack() {

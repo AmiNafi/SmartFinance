@@ -42,6 +42,9 @@ class FinanceViewModel(
         getTransactionsForMonthFlow(month, year)
     }.flatMapLatest { it }
 
+    // Get all transactions (for total balance calculation)
+    val allTransactions: Flow<List<Transaction>> = transactionRepository.getAllTransactions()
+
     private fun getTransactionsForMonthFlow(month: Int, year: Int): Flow<List<Transaction>> {
         val calendar = Calendar.getInstance()
         calendar.set(year, month, 1, 0, 0, 0)
@@ -114,19 +117,48 @@ class FinanceViewModel(
         }
     }
 
-    // Get monthly summary
-    fun getMonthlySummary(transactions: List<Transaction>): MonthlySummary {
-        val totalIncome = transactions
+    // Get monthly summary with both monthly and total balance
+    fun getMonthlySummary(monthlyTransactions: List<Transaction>, allTransactions: List<Transaction>): FinancialSummary {
+        // Monthly calculations
+        val monthlyIncome = monthlyTransactions
             .filter { it.type == TransactionType.INCOME }
             .sumOf { it.amount }
 
-        val totalExpenses = transactions
+        val monthlyExpenses = monthlyTransactions
             .filter { it.type == TransactionType.EXPENSE }
             .sumOf { it.amount }
 
-        val balance = totalIncome - totalExpenses
+        val monthlySavings = monthlyTransactions
+            .filter { it.type == TransactionType.SAVINGS }
+            .sumOf { it.amount }
 
-        return MonthlySummary(totalIncome, totalExpenses, balance)
+        val monthlyBalance = monthlyIncome - monthlyExpenses - monthlySavings
+
+        // Total calculations (all time)
+        val totalIncome = allTransactions
+            .filter { it.type == TransactionType.INCOME }
+            .sumOf { it.amount }
+
+        val totalExpenses = allTransactions
+            .filter { it.type == TransactionType.EXPENSE }
+            .sumOf { it.amount }
+
+        val totalSavings = allTransactions
+            .filter { it.type == TransactionType.SAVINGS }
+            .sumOf { it.amount }
+
+        val totalBalance = totalIncome - totalExpenses - totalSavings
+
+        return FinancialSummary(
+            monthlyIncome = monthlyIncome,
+            monthlyExpenses = monthlyExpenses,
+            monthlySavings = monthlySavings,
+            monthlyBalance = monthlyBalance,
+            totalIncome = totalIncome,
+            totalExpenses = totalExpenses,
+            totalSavings = totalSavings,
+            totalBalance = totalBalance
+        )
     }
 
     // Process AI message and detect transaction
@@ -136,8 +168,10 @@ class FinanceViewModel(
 
     // Add AI-detected transaction
     fun addAIDetectedTransaction(aiTransaction: AIDetectedTransaction) {
-        // Use current date and time when AI transaction is added
-        val transactionDate = Date()
+        // Use selected month/year instead of current date
+        val calendar = Calendar.getInstance()
+        calendar.set(_selectedYear.value, _selectedMonth.value, 15, 12, 0, 0) // Mid-month default
+        val transactionDate = calendar.time
 
         val transaction = Transaction(
             id = System.currentTimeMillis().toString(),
@@ -150,8 +184,13 @@ class FinanceViewModel(
     }
 }
 
-data class MonthlySummary(
+data class FinancialSummary(
+    val monthlyIncome: Double,
+    val monthlyExpenses: Double,
+    val monthlySavings: Double,
+    val monthlyBalance: Double,
     val totalIncome: Double,
     val totalExpenses: Double,
-    val balance: Double
+    val totalSavings: Double,
+    val totalBalance: Double
 )

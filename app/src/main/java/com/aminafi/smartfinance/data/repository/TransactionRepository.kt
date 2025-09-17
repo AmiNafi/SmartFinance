@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
  */
 interface TransactionRepository {
     fun getTransactionsForMonth(start: Long, end: Long): Flow<List<Transaction>>
+    fun getAllTransactions(): Flow<List<Transaction>>
     suspend fun insertTransaction(transaction: Transaction)
     suspend fun deleteTransaction(transaction: Transaction)
     suspend fun updateTransaction(transaction: Transaction)

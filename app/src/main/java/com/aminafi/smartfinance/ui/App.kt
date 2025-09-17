@@ -28,13 +28,14 @@ fun FinanceApp(viewModel: FinanceViewModel = koinViewModel()) {
     val uiActions = remember { DefaultUiActions(uiStateManager) }
 
     val transactions by viewModel.currentMonthTransactions.collectAsState(initial = emptyList())
+    val allTransactions by viewModel.allTransactions.collectAsState(initial = emptyList())
     val selectedMonth by viewModel.selectedMonth.collectAsState(initial = 0)
     val selectedYear by viewModel.selectedYear.collectAsState(initial = 2025)
 
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val summary = viewModel.getMonthlySummary(transactions)
+    val summary = viewModel.getMonthlySummary(transactions, allTransactions)
     val (currentMonthName, currentYear, fullDate) = viewModel.getCurrentDateInfo()
     val selectedMonthName = SimpleDateFormat("MMMM", Locale.getDefault()).format(
         Calendar.getInstance().apply { set(Calendar.MONTH, selectedMonth) }.time
@@ -83,6 +84,7 @@ fun FinanceApp(viewModel: FinanceViewModel = koinViewModel()) {
                 Screen.Home -> HomeScreen(
                     viewModel = viewModel,
                     transactions = transactions,
+                    allTransactions = allTransactions,
                     selectedMonth = selectedMonth,
                     selectedYear = selectedYear,
                     selectedMonthName = selectedMonthName,
@@ -90,6 +92,7 @@ fun FinanceApp(viewModel: FinanceViewModel = koinViewModel()) {
                     snackbarHostState = snackbarHostState,
                     onNavigateToExpenseList = navigationActions::navigateToExpenseList,
                     onNavigateToIncomeList = navigationActions::navigateToIncomeList,
+                    onNavigateToSavingsList = navigationActions::navigateToSavingsList,
                     onShowAddTransactionDialog = uiActions::showAddTransactionDialog,
                     onShowAIConfirmationDialog = uiActions::showAIConfirmationDialog
                 )
@@ -104,6 +107,13 @@ fun FinanceApp(viewModel: FinanceViewModel = koinViewModel()) {
                 Screen.IncomeList -> TransactionListScreen(
                     transactions = transactions.filter { it.type == TransactionType.INCOME },
                     title = "Monthly Income",
+                    onBack = navigationActions::navigateToHome,
+                    onEditTransaction = uiActions::showEditTransactionDialog
+                )
+
+                Screen.SavingsList -> TransactionListScreen(
+                    transactions = transactions.filter { it.type == TransactionType.SAVINGS },
+                    title = "Monthly Savings",
                     onBack = navigationActions::navigateToHome,
                     onEditTransaction = uiActions::showEditTransactionDialog
                 )

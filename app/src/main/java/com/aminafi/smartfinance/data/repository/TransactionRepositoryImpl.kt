@@ -19,6 +19,11 @@ class TransactionRepositoryImpl(
             .map { entities -> entities.map { it.toTransaction() } }
     }
 
+    override fun getAllTransactions(): Flow<List<Transaction>> {
+        return transactionDao.getAllTransactions()
+            .map { entities -> entities.map { it.toTransaction() } }
+    }
+
     override suspend fun insertTransaction(transaction: Transaction) {
         val entity = TransactionEntity.fromTransaction(transaction)
         transactionDao.insertTransaction(entity)

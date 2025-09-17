@@ -50,11 +50,12 @@ fun TransactionItem(transaction: Transaction) {
                 )
             }
             Text(
-                text = "${if (transaction.type == TransactionType.INCOME) "+" else "-"}$${"%.2f".format(transaction.amount)}",
-                color = if (transaction.type == TransactionType.INCOME)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.error
+                text = "${if (transaction.type == TransactionType.INCOME) "+" else if (transaction.type == TransactionType.SAVINGS) "-" else "-"}$${"%.2f".format(transaction.amount)}",
+                color = when (transaction.type) {
+                    TransactionType.INCOME -> MaterialTheme.colorScheme.primary
+                    TransactionType.SAVINGS -> Color(0xFF2196F3) // Blue for savings
+                    else -> MaterialTheme.colorScheme.error
+                }
             )
         }
     }
@@ -96,13 +97,14 @@ fun TransactionItemEditable(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "${if (transaction.type == TransactionType.INCOME) "+" else "-"}৳${"%.2f".format(transaction.amount)}",
+                    text = "${if (transaction.type == TransactionType.INCOME) "+" else if (transaction.type == TransactionType.SAVINGS) "-" else "-"}৳${"%.2f".format(transaction.amount)}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (transaction.type == TransactionType.INCOME)
-                        Color(0xFF4CAF50) // Green for income
-                    else
-                        MaterialTheme.colorScheme.error // Red for expenses
+                    color = when (transaction.type) {
+                        TransactionType.INCOME -> Color(0xFF4CAF50) // Green for income
+                        TransactionType.SAVINGS -> Color(0xFF2196F3) // Blue for savings
+                        else -> MaterialTheme.colorScheme.error // Red for expenses
+                    }
                 )
                 Text(
                     text = transaction.type.name,
