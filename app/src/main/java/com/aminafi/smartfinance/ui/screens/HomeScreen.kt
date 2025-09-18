@@ -62,17 +62,17 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             IncomeCard(
-                amount = summary.totalIncome,
+                amount = summary.monthlyIncome,
                 onClick = onNavigateToIncomeList,
                 monthName = selectedMonthName
             )
             ExpenseCard(
-                amount = summary.totalExpenses,
+                amount = summary.monthlyExpenses,
                 onClick = onNavigateToExpenseList,
                 monthName = selectedMonthName
             )
             SavingsCard(
-                amount = summary.totalSavings,
+                amount = summary.monthlySavings,
                 onClick = onNavigateToSavingsList,
                 monthName = selectedMonthName
             )
@@ -130,12 +130,14 @@ fun HomeScreen(
                 },
                 onAddManual = {
                     // Show manual transaction dialog
+                    val currentDate = Date()
                     val newTransaction = Transaction(
                         id = "",
                         amount = 0.0,
                         description = "",
                         type = TransactionType.EXPENSE,
-                        date = Date()
+                        date = currentDate,
+                        entryDate = currentDate
                     )
                     onShowAddTransactionDialog(newTransaction)
                 }

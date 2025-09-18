@@ -22,18 +22,22 @@ We believe that **true financial freedom begins with privacy, accessibility, and
 - **Rule-Based Analysis**: Uses sophisticated pattern-matching algorithms (no machine learning)
 - **Natural Language Processing**: Add transactions using conversational language
 - **Smart Amount Extraction**: Automatically detects monetary values from text
-- **Intelligent Categorization**: Automatically classifies income vs expenses using rule-based logic
+- **Intelligent Categorization**: Automatically classifies income vs expenses vs savings using rule-based logic
 - **Smart Title Generation**: Creates meaningful transaction descriptions through pattern analysis
 - **Chat Interface**: Interactive messenger-style input for natural transaction entry
+- **AI Confirmation Dialog**: Review and edit AI-detected transactions before saving
 
-### Financial Management
+### Advanced Financial Management
 - **Dual Balance Tracking**: Monthly balance + Total balance across all time
 - **Real-time Calculations**: Live updates of income, expenses, savings, and balances
 - **Monthly Navigation**: Navigate through different months to view historical data
+- **Smart Month Filtering**: Transactions are properly filtered by selected month for accurate reporting
 - **Transaction History**: Complete list of all financial transactions with proper categorization
+- **Chronological Sorting**: Transactions sorted by entry date (newest first) for better UX
 - **Visual Analytics**: Clean, intuitive UI for comprehensive financial insights
 - **Transaction Management**: Edit, delete, and categorize transactions with ease
 - **Savings Integration**: Full support for savings transactions with dedicated tracking
+- **Entry Date Tracking**: Separate entry date from transaction month for accurate record-keeping
 
 ### Modern UI/UX
 - **Jetpack Compose**: Built with modern Android UI toolkit
@@ -41,14 +45,18 @@ We believe that **true financial freedom begins with privacy, accessibility, and
 - **Responsive Design**: Optimized for various screen sizes
 - **Dark/Light Theme**: Automatic theme adaptation
 - **Intuitive Navigation**: Seamless screen transitions and state management
+- **Refactored Components**: Reduced code duplication with reusable components
+- **Modern Dialogs**: Clean, modern transaction input dialogs
 
 ### Technical Excellence
 - **Clean Architecture**: Domain-Driven Design with clear separation of concerns
 - **SOLID Principles**: Perfect adherence to software design principles
 - **Dependency Injection**: Koin-powered DI for maintainable code
 - **MVVM Pattern**: Modern Android architecture pattern
-- **Room Database**: Local data persistence with SQLite
+- **Room Database**: Local data persistence with SQLite and proper migrations
+- **Database Schema Evolution**: Seamless upgrades with migration support
 - **Kotlin Coroutines**: Asynchronous programming for smooth UX
+- **Flow-based Data Streams**: Reactive data handling with Kotlin Flow
 
 ## Tech Stack
 
@@ -88,10 +96,10 @@ SmartFinance/
 │   │   │   │   ├── repository/      # Repository pattern implementation
 │   │   │   │   │   ├── TransactionRepository.kt
 │   │   │   │   │   └── TransactionRepositoryImpl.kt
-│   │   │   │   ├── AppDatabase.kt   # Room database configuration
-│   │   │   │   ├── Transaction.kt   # Domain model
-│   │   │   │   ├── TransactionDao.kt # Data access object
-│   │   │   │   └── TransactionEntity.kt # Database entity
+│   │   │   │   ├── AppDatabase.kt   # Room database configuration with migrations
+│   │   │   │   ├── Transaction.kt   # Domain model with dual date fields
+│   │   │   │   ├── TransactionDao.kt # Data access object with entryDate sorting
+│   │   │   │   └── TransactionEntity.kt # Database entity with entryDate field
 │   │   │   ├── di/               # Dependency injection
 │   │   │   │   └── AppModule.kt     # Koin module definitions
 │   │   │   ├── domain/           # Domain layer (business logic)
@@ -101,15 +109,19 @@ SmartFinance/
 │   │   │   │       ├── ProcessAIMessageUseCase.kt
 │   │   │   │       └── ProcessAIMessageUseCaseImpl.kt
 │   │   │   ├── ui/               # UI layer
-│   │   │   │   ├── App.kt           # Main composable
+│   │   │   │   ├── App.kt           # Main composable with month filtering
 │   │   │   │   ├── ChatInterface.kt # Chat UI component
 │   │   │   │   ├── components/      # Reusable UI components
 │   │   │   │   │   ├── FinanceComponents.kt
 │   │   │   │   │   ├── MessengerInput.kt
 │   │   │   │   │   ├── MonthYearSelector.kt
-│   │   │   │   │   └── TransactionComponents.kt
-│   │   │   │   ├── dialogs/         # Dialog components
-│   │   │   │   │   └── TransactionDialogs.kt
+│   │   │   │   │   ├── TransactionComponents.kt
+│   │   │   │   │   └── TransactionTypeSelector.kt # Reusable type selector
+│   │   │   │   ├── dialogs/         # Refactored dialog components
+│   │   │   │   │   ├── AddTransactionDialog.kt
+│   │   │   │   │   ├── AIConfirmationDialog.kt
+│   │   │   │   │   ├── EditTransactionDialog.kt
+│   │   │   │   │   └── TransactionDialogs.kt # Re-export facade
 │   │   │   │   ├── navigation/      # Navigation management
 │   │   │   │   │   └── NavigationManager.kt
 │   │   │   │   ├── screens/         # Screen components
@@ -121,7 +133,7 @@ SmartFinance/
 │   │   │   │       ├── Color.kt
 │   │   │   │       ├── Theme.kt
 │   │   │   │       └── Type.kt
-│   │   │   ├── FinanceViewModel.kt  # Legacy ViewModel (being phased out)
+│   │   │   ├── FinanceViewModel.kt  # Main ViewModel with dual date handling
 │   │   │   ├── MainActivity.kt      # Main activity
 │   │   │   └── SmartFinanceApplication.kt
 │   │   └── res/                     # Android resources
@@ -218,10 +230,12 @@ SmartFinance/
 ### Viewing Financial Data
 - **Home Screen**: Dual balance display (monthly + total) with income, expenses, and savings
 - **Month Navigation**: Use arrow buttons to navigate between months and see historical data
-- **Transaction Lists**: Tap income/expense/savings cards to see detailed categorized lists
+- **Smart Month Filtering**: Transactions are properly filtered by selected month for accurate reporting
+- **Transaction Lists**: Tap income/expense/savings cards to see detailed categorized lists sorted by entry date
 - **Balance Tracking**: Monitor both current month performance and overall financial health
 - **Edit Transactions**: Long press any transaction to edit or delete
-- **Date Management**: Transactions are properly dated to selected months for accurate tracking
+- **Dual Date System**: Separate entry date (when transaction was added) from transaction month (for filtering)
+- **Chronological Sorting**: All transaction lists show newest entries first for better UX
 
 ## Testing
 

@@ -91,7 +91,7 @@ fun TransactionItemEditable(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(transaction.date),
+                    text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(transaction.entryDate),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

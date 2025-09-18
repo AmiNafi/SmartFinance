@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TransactionDao {
 
-    @Query("SELECT * FROM transactions ORDER BY date DESC")
+    @Query("SELECT * FROM transactions ORDER BY entryDate DESC")
     fun getAllTransactions(): Flow<List<TransactionEntity>>
 
-    @Query("SELECT * FROM transactions WHERE date >= :startOfMonth AND date <= :endOfMonth ORDER BY date DESC")
+    @Query("SELECT * FROM transactions WHERE date >= :startOfMonth AND date <= :endOfMonth ORDER BY entryDate DESC")
     fun getTransactionsForMonth(startOfMonth: Long, endOfMonth: Long): Flow<List<TransactionEntity>>
 
     @Insert

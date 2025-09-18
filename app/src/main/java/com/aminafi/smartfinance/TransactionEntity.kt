@@ -11,7 +11,8 @@ data class TransactionEntity(
     val amount: Double,
     val description: String,
     val type: String, // Store as String for Room compatibility
-    val date: Long // Store as timestamp for Room compatibility
+    val date: Long, // Store as timestamp for Room compatibility (month/year for filtering)
+    val entryDate: Long = date // Store as timestamp for Room compatibility (actual entry date), default to date for backward compatibility
 ) {
     // Convert to domain model
     fun toTransaction(): Transaction {
@@ -25,7 +26,8 @@ data class TransactionEntity(
                 "SAVINGS" -> TransactionType.SAVINGS
                 else -> TransactionType.EXPENSE // Fallback for unknown types
             },
-            date = Date(date)
+            date = Date(date),
+            entryDate = Date(entryDate)
         )
     }
 
@@ -37,7 +39,8 @@ data class TransactionEntity(
                 amount = transaction.amount,
                 description = transaction.description,
                 type = transaction.type.name,
-                date = transaction.date.time
+                date = transaction.date.time,
+                entryDate = transaction.entryDate.time
             )
         }
     }

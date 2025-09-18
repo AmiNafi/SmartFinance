@@ -85,6 +85,14 @@ class TransactionTypeAnalyzer : TransactionTypeAnalyzerInterface {
             expenseScore += 5
         }
 
+        // Shopping and purchase keywords
+        if (text.contains("shopping") || text.contains("shop") ||
+            text.contains("bought") || text.contains("purchase") ||
+            text.contains("buy") || text.contains("bought")) {
+            println("🛒 SHOPPING DETECTED: Strong EXPENSE signal (+4)")
+            expenseScore += 4
+        }
+
         // Loss-related keywords (lost, missing, stolen, etc.)
         if (text.contains("lost") || text.contains("missing") ||
             text.contains("stolen") || text.contains("theft") ||
@@ -319,9 +327,10 @@ class TransactionTypeAnalyzer : TransactionTypeAnalyzerInterface {
             }
 
             if (text.contains("went to market") || text.contains("shopping") ||
-                text.contains("bought") || text.contains("purchase")) {
-                expenseScore += 2
-                println("🤖 CONTEXT: Shopping/market activity detected = EXPENSE")
+                text.contains("bought") || text.contains("purchase") ||
+                text.contains("shop") || text.contains("buy")) {
+                expenseScore += 3
+                println("🤖 CONTEXT: Shopping/market activity detected = EXPENSE (+3)")
             }
         }
 
@@ -610,7 +619,13 @@ class TransactionTypeAnalyzer : TransactionTypeAnalyzerInterface {
         val shoppingIndicators = listOf(
             "market", "store", "shop", "shopping", "bought", "purchase", "buy",
             "bag", "item", "product", "goods", "mall", "supermarket", "grocery",
-            "clothes", "food", "vegetables", "fruits", "went to", "for myself"
+            "clothes", "food", "vegetables", "fruits", "went to", "for myself",
+            "retail", "boutique", "department", "shopping center", "online shop",
+            "ecommerce", "amazon", "flipkart", "ebay", "walmart", "target",
+            "costco", "ikea", "home depot", "lowes", "best buy", "electronics",
+            "furniture", "books", "toys", "sports", "outdoor", "garden",
+            "pharmacy", "drugstore", "cosmetics", "beauty", "jewelry",
+            "shoes", "accessories", "handbag", "wallet", "perfume", "cologne"
         )
         return shoppingIndicators.any { indicator ->
             text.contains(indicator) || contextWords.contains(indicator)

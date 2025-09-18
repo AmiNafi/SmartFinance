@@ -168,17 +168,19 @@ class FinanceViewModel(
 
     // Add AI-detected transaction
     fun addAIDetectedTransaction(aiTransaction: AIDetectedTransaction) {
-        // Use selected month/year instead of current date
+        // Set date to selected month for filtering, entryDate to current date for display
         val calendar = Calendar.getInstance()
-        calendar.set(_selectedYear.value, _selectedMonth.value, 15, 12, 0, 0) // Mid-month default
+        calendar.set(_selectedYear.value, _selectedMonth.value, 15, 12, 0, 0) // Mid-month for filtering
         val transactionDate = calendar.time
+        val entryDate = Date() // Actual entry date
 
         val transaction = Transaction(
             id = System.currentTimeMillis().toString(),
             amount = aiTransaction.amount,
             description = aiTransaction.description,
             type = aiTransaction.type,
-            date = transactionDate
+            date = transactionDate,
+            entryDate = entryDate
         )
         addTransaction(transaction)
     }
