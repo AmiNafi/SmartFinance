@@ -2,22 +2,19 @@ package com.aminafi.smartfinance.ui.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aminafi.smartfinance.Transaction
 import com.aminafi.smartfinance.TransactionType
-import com.aminafi.smartfinance.ui.components.TransactionTypeSelector
+import com.aminafi.smartfinance.ui.components.TransactionForm
+import com.aminafi.smartfinance.ui.components.TransactionFormData
+import com.aminafi.smartfinance.ui.components.isValid
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -29,23 +26,15 @@ fun AddTransactionDialog(
     selectedMonth: Int,
     selectedYear: Int
 ) {
-    var amount by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf(TransactionType.EXPENSE) }
+    var formData by remember { mutableStateOf(TransactionFormData()) }
 
     val selectedMonthName = SimpleDateFormat("MMMM", Locale.getDefault()).format(
         Calendar.getInstance().apply { set(Calendar.MONTH, selectedMonth) }.time
     )
 
-    // Modern Modal Bottom Sheet Style Dialog
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Ensure sheet is fully expanded when opened
-    LaunchedEffect(Unit) {
-        sheetState.expand()
-    }
+    LaunchedEffect(Unit) { sheetState.expand() }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -58,10 +47,9 @@ fun AddTransactionDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
-            // Header with modern styling
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -69,151 +57,71 @@ fun AddTransactionDialog(
             ) {
                 Column {
                     Text(
-                        text = "Add Transaction",
+                        "Add Transaction",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "$selectedMonthName $selectedYear",
+                        "$selectedMonthName $selectedYear",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Icon(Icons.Filled.Close, "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Description Field with modern styling
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = {
-                    Text(
-                        "Transaction Description",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                placeholder = { Text("e.g., Salary, Coffee, Savings deposit") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                ),
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Amount Field with modern styling
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = {
-                    Text(
-                        "Amount",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                placeholder = { Text("0.00") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                ),
-                leadingIcon = {
-                    Text(
-                        text = "৳",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Transaction Type Selection using reusable component
-            TransactionTypeSelector(
-                selectedType = type,
-                onTypeSelected = { type = it }
+            TransactionForm(
+                initialData = formData,
+                onDataChange = { formData = it }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Modern Action Buttons
+            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = MaterialTheme.shapes.large,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
-                    Text(
-                        "Cancel",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Text("Cancel", style = MaterialTheme.typography.labelLarge)
                 }
 
                 Button(
                     onClick = {
-                        val amountValue = amount.toDoubleOrNull()
-                        if (amountValue != null && description.isNotBlank()) {
-                            // Set date to selected month for filtering, entryDate to current date for display
+                        if (isValid(formData)) {
                             val calendar = Calendar.getInstance()
-                            calendar.set(selectedYear, selectedMonth, 15, 12, 0, 0) // Mid-month for filtering
-                            val transactionDate = calendar.time
-                            val entryDate = Date() // Actual entry date
-
+                            calendar.set(selectedYear, selectedMonth, 15, 12, 0, 0)
                             val transaction = Transaction(
                                 id = System.currentTimeMillis().toString(),
-                                amount = amountValue,
-                                description = description,
-                                type = type,
-                                date = transactionDate,
-                                entryDate = entryDate
+                                amount = formData.amount.toDouble(),
+                                description = formData.description,
+                                type = formData.type,
+                                date = calendar.time,
+                                entryDate = Date()
                             )
                             onAddTransaction(transaction)
-                            amount = ""
-                            description = ""
+                            formData = TransactionFormData() // Reset form
                         }
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = MaterialTheme.shapes.large,
-                    enabled = amount.toDoubleOrNull() != null && description.isNotBlank(),
+                    enabled = isValid(formData),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text(
-                        "Add Transaction",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text("Add Transaction", fontWeight = FontWeight.SemiBold)
                 }
             }
 
